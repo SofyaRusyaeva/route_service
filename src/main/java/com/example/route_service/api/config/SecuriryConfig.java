@@ -24,7 +24,6 @@ public class SecuriryConfig {
                 .build();
     }
 
-
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         var converter = new JwtAuthenticationConverter();
@@ -39,7 +38,6 @@ public class SecuriryConfig {
                             .map(SimpleGrantedAuthority::new)
                             .map(GrantedAuthority.class::cast))
                             .toList();
-
         });
         return converter;
     }

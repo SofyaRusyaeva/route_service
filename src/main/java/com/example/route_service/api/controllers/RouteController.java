@@ -1,6 +1,7 @@
 package com.example.route_service.api.controllers;
 
 
+import com.example.route_service.api.services.AuthService;
 import com.example.route_service.api.services.RouteService;
 import com.example.route_service.store.documents.RouteDocument;
 import jakarta.validation.Valid;
@@ -20,16 +21,11 @@ import java.util.List;
 public class RouteController {
 
     RouteService routeService;
+    AuthService authService;
 
-
-    @GetMapping("/all")
-    public ResponseEntity<List<RouteDocument>> getAll() {
-        List<RouteDocument> routes = routeService.getAll();
-        return ResponseEntity.ok(routes);
-    }
-
-    @GetMapping("/{userId}")
-    public ResponseEntity<List<RouteDocument>> getUserRoutes(@PathVariable String userId) {
+    @GetMapping()
+    public ResponseEntity<List<RouteDocument>> getUserRoutes() {
+        String userId = authService.getCurrentUserId();
         List<RouteDocument> routes = routeService.getRoutesByUserId(userId);
         return ResponseEntity.ok(routes);
     }
@@ -44,8 +40,6 @@ public class RouteController {
     @PutMapping("/{routeId}")
     public ResponseEntity<RouteDocument> updateRoute(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDocument newRoute) {
         RouteDocument route = routeService.updateRoute(routeId, newRoute);
-//        if (route == null)
-//            return ResponseEntity.notFound().build();
         return ResponseEntity.ok(route);
     }
 
