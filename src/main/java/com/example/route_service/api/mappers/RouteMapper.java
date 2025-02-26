@@ -1,16 +1,17 @@
 package com.example.route_service.api.mappers;
 
-import com.example.route_service.api.dto.RouteRequestDto;
-import com.example.route_service.api.dto.RouteResponseDto;
+import com.example.route_service.api.dto.RouteDto;
 import com.example.route_service.store.documents.RouteDocument;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import lombok.experimental.UtilityClass;
 
-@Mapper(componentModel = "spring")
-public interface RouteMapper {
+@UtilityClass
+public class RouteMapper {
 
-//    @Mapping(target = "routeId", ignore = true)
-    RouteResponseDto toDto(RouteDocument entity);
+    public RouteDocument toDocument(RouteDto dto, String userId) {
+        return new RouteDocument(null, userId, dto.getPointsId());
+    }
 
-    RouteDocument toEntity(RouteRequestDto dto);
+    public RouteDto toDto(RouteDocument route) {
+        return new RouteDto(route.getUserId(), route.getPointsId());
+    }
 }

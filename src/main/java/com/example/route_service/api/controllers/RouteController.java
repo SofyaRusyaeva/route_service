@@ -1,6 +1,7 @@
 package com.example.route_service.api.controllers;
 
 
+import com.example.route_service.api.dto.RouteDto;
 import com.example.route_service.api.services.AuthService;
 import com.example.route_service.api.services.RouteService;
 import com.example.route_service.store.documents.RouteDocument;
@@ -26,19 +27,18 @@ public class RouteController {
     @GetMapping()
     public ResponseEntity<List<RouteDocument>> getUserRoutes() {
         String userId = authService.getCurrentUserId();
-        List<RouteDocument> routes = routeService.getRoutesByUserId(userId);
-        return ResponseEntity.ok(routes);
+        return ResponseEntity.ok(routeService.getRoutesByUserId(userId));
     }
 
     @PostMapping
-    public ResponseEntity<RouteDocument> addRoute(@Valid @RequestBody RouteDocument route) {
-        RouteDocument savedRoute = routeService.addRoute(route);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedRoute);
+    public ResponseEntity<RouteDocument> addRoute(@Valid @RequestBody RouteDto route) {
+        String userId = authService.getCurrentUserId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(routeService.addRoute(route, userId));
     }
 
 
     @PutMapping("/{routeId}")
-    public ResponseEntity<RouteDocument> updateRoute(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDocument newRoute) {
+    public ResponseEntity<RouteDocument> updateRoute(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDto newRoute) {
         RouteDocument route = routeService.updateRoute(routeId, newRoute);
         return ResponseEntity.ok(route);
     }

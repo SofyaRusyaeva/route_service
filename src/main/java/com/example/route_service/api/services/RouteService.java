@@ -1,10 +1,13 @@
 package com.example.route_service.api.services;
 
 
+import com.example.route_service.api.dto.RouteDto;
 import com.example.route_service.api.exeptions.InvalidObjectIdException;
 import com.example.route_service.api.exeptions.RouteNotFoundException;
 import com.example.route_service.api.exeptions.RouteSaveException;
+import com.example.route_service.api.mappers.RouteMapper;
 import com.example.route_service.store.documents.RouteDocument;
+import com.example.route_service.store.repositories.PointRepository;
 import com.example.route_service.store.repositories.RouteRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,8 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class RouteService {
     RouteRepository routeRepository;
+    PointRepository pointRepository;
+
 
     public List<RouteDocument> getRoutesByUserId(String userId) {
         List<RouteDocument> routes = routeRepository.findByUserId(userId);
@@ -26,15 +31,17 @@ public class RouteService {
         return routes;
     }
 
-    public RouteDocument addRoute(RouteDocument route) {
+    public RouteDocument addRoute(RouteDto route, String userId) {
+        validatePoints(route.getPointsId());
         try {
-            return routeRepository.save(route);
+            return routeRepository.save(RouteMapper.toDocument(route, userId));
         } catch (Exception e) {
             throw new RouteSaveException("Error adding route");
         }
     }
 
-    public RouteDocument updateRoute(String routeId, RouteDocument newRoute) {
+    public RouteDocument updateRoute(String routeId, RouteDto newRoute) {
+        validatePoints(newRoute.getPointsId());
         return routeRepository.findById(routeId)
                 .map(existingRoute -> {
                     existingRoute.setPointsId(newRoute.getPointsId());
@@ -51,5 +58,12 @@ public class RouteService {
                 () -> new RouteNotFoundException(String.format("Route with id %s not found", routeId))
         );
         routeRepository.delete(route);
+    }
+
+    private void validatePoints(List<String> pointsId) {
+        long existingPointsCount = pointRepository.countByPointIdIn(pointsId);
+        if (existingPointsCount != pointsId.size()) {
+            throw new InvalidObjectIdException("One or more points do not exist in the database");
+        }
     }
 }

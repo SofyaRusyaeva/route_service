@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Configuration
-public class SecuriryConfig {
+public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
@@ -22,6 +22,7 @@ public class SecuriryConfig {
                         .requestMatchers("api/routes/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .build();
+
     }
 
     @Bean
@@ -34,7 +35,7 @@ public class SecuriryConfig {
             var roles = (List<String>) jwt.getClaimAsMap("realm_access").get("roles");
             return Stream.concat(authorities.stream(),
                     roles.stream().
-                            filter(role -> role.startsWith("ROLE_"))  //filter(role -> role.startsWith("ROLE_")
+                            filter(role -> role.startsWith("ROLE_"))
                             .map(SimpleGrantedAuthority::new)
                             .map(GrantedAuthority.class::cast))
                             .toList();
