@@ -1,6 +1,7 @@
 package com.example.route_service.store.documents;
 
 import com.example.route_service.store.documents.models.LocationData;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -37,6 +38,7 @@ public class PointDocument {
     @Field
     String address;
 
-    @Field
+    @Valid
+    @Field("location_data")
     LocationData locationData;
 }

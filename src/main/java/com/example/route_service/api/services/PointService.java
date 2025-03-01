@@ -31,6 +31,7 @@ public class PointService {
                     existingPoint.setLatitude(newPoint.getLatitude());
                     existingPoint.setLongitude(newPoint.getLongitude());
                     existingPoint.setAddress(newPoint.getAddress());
+                    existingPoint.setLocationData(newPoint.getLocationData());
                     return pointRepository.save(existingPoint);
                 })
                 .orElseThrow(() -> new ObjectNotFoundException(String.format("Point with id %s not found", pointId)));

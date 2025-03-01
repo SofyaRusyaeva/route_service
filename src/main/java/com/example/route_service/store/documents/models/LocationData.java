@@ -6,7 +6,8 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.HashMap;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
