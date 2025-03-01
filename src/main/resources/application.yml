@@ -4,3 +4,13 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8081/realms/my_realm
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8081/realms/my_realm
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: my_client
+            client-secret: c3v4GZmgBhP5gLSl9ZYGrGqxSk5bWrw6
+            scope: openid

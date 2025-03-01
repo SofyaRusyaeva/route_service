@@ -18,11 +18,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        return http.authorizeHttpRequests(c -> c.requestMatchers("/error").permitAll()
+//        http.oauth2Login(Customizer.withDefaults());
+        return http.authorizeHttpRequests(
+                        c -> c.requestMatchers("/auth").permitAll()
                         .requestMatchers("api/routes/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .build();
 
+                .build();
     }
 
     @Bean
