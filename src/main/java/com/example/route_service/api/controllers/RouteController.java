@@ -39,8 +39,7 @@ public class RouteController {
 
     @PutMapping("/{routeId}")
     public ResponseEntity<RouteDocument> updateRoute(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDto newRoute) {
-        RouteDocument route = routeService.updateRoute(routeId, newRoute);
-        return ResponseEntity.ok(route);
+        return ResponseEntity.ok(routeService.updateRoute(routeId, newRoute));
     }
 
     @DeleteMapping("/{routeId}")

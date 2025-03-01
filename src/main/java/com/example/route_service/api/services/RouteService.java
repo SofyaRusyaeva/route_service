@@ -3,8 +3,8 @@ package com.example.route_service.api.services;
 
 import com.example.route_service.api.dto.RouteDto;
 import com.example.route_service.api.exeptions.InvalidObjectIdException;
-import com.example.route_service.api.exeptions.RouteNotFoundException;
-import com.example.route_service.api.exeptions.RouteSaveException;
+import com.example.route_service.api.exeptions.ObjectNotFoundException;
+import com.example.route_service.api.exeptions.ObjectSaveException;
 import com.example.route_service.api.mappers.RouteMapper;
 import com.example.route_service.store.documents.RouteDocument;
 import com.example.route_service.store.repositories.PointRepository;
@@ -27,7 +27,7 @@ public class RouteService {
     public List<RouteDocument> getRoutesByUserId(String userId) {
         List<RouteDocument> routes = routeRepository.findByUserId(userId);
         if(routes.isEmpty())
-            throw new RouteNotFoundException(String.format("No routes found for user %s", userId));
+            throw new ObjectNotFoundException(String.format("No routes found for user %s", userId));
         return routes;
     }
 
@@ -36,7 +36,7 @@ public class RouteService {
         try {
             return routeRepository.save(RouteMapper.toDocument(route, userId));
         } catch (Exception e) {
-            throw new RouteSaveException("Error adding route");
+            throw new ObjectSaveException("Error adding route");
         }
     }
 
@@ -47,7 +47,7 @@ public class RouteService {
                     existingRoute.setPointsId(newRoute.getPointsId());
                     return routeRepository.save(existingRoute);
                 })
-                .orElseThrow(() -> new RouteNotFoundException(String.format("Route with id %s not found", routeId)));
+                .orElseThrow(() -> new ObjectNotFoundException(String.format("Route with id %s not found", routeId)));
     }
 
     public void deleteRoute(String routeId) {
@@ -55,7 +55,7 @@ public class RouteService {
             throw new InvalidObjectIdException("routeId can't be null");
         }
         RouteDocument route = routeRepository.findById(routeId).orElseThrow(
-                () -> new RouteNotFoundException(String.format("Route with id %s not found", routeId))
+                () -> new ObjectNotFoundException(String.format("Route with id %s not found", routeId))
         );
         routeRepository.delete(route);
     }

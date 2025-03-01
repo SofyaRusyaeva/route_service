@@ -1,5 +1,6 @@
 package com.example.route_service.api.dto;
 
+import com.example.route_service.store.documents.models.LocationData;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -20,4 +21,6 @@ public class PointDto {
     Double longitude;
 
     String address;
+
+    LocationData locationData;
 }

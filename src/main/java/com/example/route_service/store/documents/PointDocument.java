@@ -3,9 +3,11 @@ package com.example.route_service.store.documents;
 import com.example.route_service.store.documents.models.LocationData;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
-
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -35,6 +37,6 @@ public class PointDocument {
     @Field
     String address;
 
-    @Field("location_data")
+    @Field
     LocationData locationData;
 }

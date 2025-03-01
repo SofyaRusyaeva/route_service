@@ -13,8 +13,8 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(RouteNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleRouteNotFoundException(RouteNotFoundException e) {
+    @ExceptionHandler(ObjectNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleRouteNotFoundException(ObjectNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 Map.of(
                         "status", HttpStatus.NOT_FOUND.value(),
@@ -33,8 +33,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(RouteSaveException.class)
-    public ResponseEntity<Map<String, Object>> handleRouteSaveException(RouteSaveException e) {
+    @ExceptionHandler(ObjectSaveException.class)
+    public ResponseEntity<Map<String, Object>> handleRouteSaveException(ObjectSaveException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 Map.of(
                         "status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
