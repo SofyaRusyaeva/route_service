@@ -48,14 +48,14 @@ public class AuthService {
         var requestEntity = new HttpEntity<>(body, headers);
         var restTemplate = new RestTemplate();
 
-        var responce = restTemplate.exchange(
+        var response = restTemplate.exchange(
                 resourceServerUrl,
                 HttpMethod.POST,
                 requestEntity,
                 String.class
         );
-        if (responce.getStatusCode().value() == 200) {
-            return responce.getBody();
+        if (response.getStatusCode().value() == 200) {
+            return response.getBody();
         }
         return null;
 

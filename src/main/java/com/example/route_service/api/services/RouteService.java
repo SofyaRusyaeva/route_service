@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -22,16 +25,16 @@ import java.util.List;
 public class RouteService {
     RouteRepository routeRepository;
     PointRepository pointRepository;
+    AuthService authService;
 
 
-    public List<RouteDocument> getRoutesByUserId(String userId) {
-        List<RouteDocument> routes = routeRepository.findByUserId(userId);
-        if(routes.isEmpty())
-            throw new ObjectNotFoundException(String.format("No routes found for user %s", userId));
-        return routes;
+    public List<RouteDocument> getRoutes() {
+        String userId = authService.getCurrentUserId();
+        return routeRepository.findByUserId(userId);
     }
 
-    public RouteDocument addRoute(RouteDto route, String userId) {
+    public RouteDocument addRoute(RouteDto route) {
+        String userId = authService.getCurrentUserId();
         validatePoints(route.getPointsId());
         try {
             return routeRepository.save(RouteMapper.toDocument(route, userId));
@@ -41,29 +44,53 @@ public class RouteService {
     }
 
     public RouteDocument updateRoute(String routeId, RouteDto newRoute) {
+        String userId = authService.getCurrentUserId();
         validatePoints(newRoute.getPointsId());
-        return routeRepository.findById(routeId)
-                .map(existingRoute -> {
-                    existingRoute.setPointsId(newRoute.getPointsId());
-                    return routeRepository.save(existingRoute);
-                })
-                .orElseThrow(() -> new ObjectNotFoundException(String.format("Route with id %s not found", routeId)));
+
+        RouteDocument route = routeRepository.findByUserIdAndRouteId(userId, routeId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        String.format("Route %s not found", routeId)));
+        route.setPointsId(newRoute.getPointsId());
+        return routeRepository.save(route);
     }
 
     public void deleteRoute(String routeId) {
+        String userId = authService.getCurrentUserId();
         if (routeId == null || routeId.isBlank()) {
             throw new InvalidObjectIdException("routeId can't be null");
         }
-        RouteDocument route = routeRepository.findById(routeId).orElseThrow(
-                () -> new ObjectNotFoundException(String.format("Route with id %s not found", routeId))
-        );
+        RouteDocument route = routeRepository.findByUserIdAndRouteId(userId, routeId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        String.format("Route %s not found", routeId)));
         routeRepository.delete(route);
     }
 
+    public RouteDocument changeVisibility(String routeId) {
+        String userId = authService.getCurrentUserId();
+        RouteDocument route = routeRepository.findByUserIdAndRouteId(userId, routeId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        String.format("Route %s not found", routeId)));
+        route.setPublic(!route.isPublic());
+        return routeRepository.save(route);
+    }
+
     private void validatePoints(List<String> pointsId) {
-        long existingPointsCount = pointRepository.countByPointIdIn(pointsId);
-        if (existingPointsCount != pointsId.size()) {
+//        long existingPointsCount = pointRepository.countByPointIdIn(pointsId);
+//        if (existingPointsCount != pointsId.size()) {
+//            throw new InvalidObjectIdException("One or more points do not exist in the database");
+//        }
+        Set<String> uniquePoints = new HashSet<>(pointsId);
+
+        // Получаем количество существующих точек из уникальных
+        long existingPointsCount = pointRepository.countByPointIdIn(new ArrayList<>(uniquePoints));
+
+        // Если количество существующих точек меньше уникальных, значит, не все точки есть в базе
+        if (existingPointsCount != uniquePoints.size()) {
             throw new InvalidObjectIdException("One or more points do not exist in the database");
         }
+    }
+
+    public List<RouteDocument> getUserRoutes(String userId) {
+        return routeRepository.findAllByUserIdAndIsPublicTrue(userId);
     }
 }

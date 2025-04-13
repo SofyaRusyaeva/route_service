@@ -2,7 +2,6 @@ package com.example.route_service.api.controllers;
 
 
 import com.example.route_service.api.dto.RouteDto;
-import com.example.route_service.api.services.AuthService;
 import com.example.route_service.api.services.RouteService;
 import com.example.route_service.store.documents.RouteDocument;
 import jakarta.validation.Valid;
@@ -22,24 +21,30 @@ import java.util.List;
 public class RouteController {
 
     RouteService routeService;
-    AuthService authService;
 
     @GetMapping()
-    public ResponseEntity<List<RouteDocument>> getUserRoutes() {
-        String userId = authService.getCurrentUserId();
-        return ResponseEntity.ok(routeService.getRoutesByUserId(userId));
+    public ResponseEntity<List<RouteDocument>> getMyRoutes() {
+        return ResponseEntity.ok(routeService.getRoutes());
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<List<RouteDocument>> getUserRoutes(@PathVariable String userId) {
+        return ResponseEntity.ok(routeService.getUserRoutes(userId));
     }
 
     @PostMapping
-    public ResponseEntity<RouteDocument> addRoute(@Valid @RequestBody RouteDto route) {
-        String userId = authService.getCurrentUserId();
-        return ResponseEntity.status(HttpStatus.CREATED).body(routeService.addRoute(route, userId));
+    public ResponseEntity<RouteDocument> createRoute(@Valid @RequestBody RouteDto route) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(routeService.addRoute(route));
     }
 
-
-    @PutMapping("/{routeId}")
-    public ResponseEntity<RouteDocument> updateRoute(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDto newRoute) {
+    @PatchMapping("/{routeId}/points")
+    public ResponseEntity<RouteDocument> updateRoutePoints(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDto newRoute) {
         return ResponseEntity.ok(routeService.updateRoute(routeId, newRoute));
+    }
+
+    @PatchMapping("/{routeId}/visibility")
+    public ResponseEntity<RouteDocument> changeRouteVisibility(@PathVariable String routeId) {
+        return ResponseEntity.ok(routeService.changeVisibility(routeId));
     }
 
     @DeleteMapping("/{routeId}")

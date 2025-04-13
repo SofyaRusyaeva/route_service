@@ -8,10 +8,6 @@ import lombok.experimental.UtilityClass;
 public class RouteMapper {
 
     public RouteDocument toDocument(RouteDto dto, String userId) {
-        return new RouteDocument(null, userId, dto.getPointsId());
-    }
-
-    public RouteDto toDto(RouteDocument route) {
-        return new RouteDto(route.getUserId(), route.getPointsId());
+        return new RouteDocument(null, userId, dto.getPointsId(), dto.isPublic());
     }
 }
