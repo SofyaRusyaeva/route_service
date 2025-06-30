@@ -4,6 +4,10 @@ import io.mongock.runner.springboot.EnableMongock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+// TODO Вернуть GlobalExceptionHandler
+// TODO дописать документацию
+// TODO вернуть авторизацию в SecurityConfig
+
 @SpringBootApplication
 @EnableMongock
 public class RouteServiceApplication {
