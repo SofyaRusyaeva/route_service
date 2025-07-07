@@ -19,4 +19,6 @@ public class Analysis {
     List<String> missedPoints;
 
     List<String> extraPoints;
+
+    List<String> outOfOrderPoints;
 }
