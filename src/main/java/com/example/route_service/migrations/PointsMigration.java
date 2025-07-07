@@ -6,6 +6,7 @@ import io.mongock.api.annotations.ChangeUnit;
 import io.mongock.api.annotations.Execution;
 import io.mongock.api.annotations.RollbackExecution;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
 import java.util.HashMap;
 import java.util.List;
@@ -17,10 +18,9 @@ public class PointsMigration {
     @Execution
     public void execute(MongoTemplate mongoTemplate) {
         List<PointDocument> points = List.of(
-                createParkPoint(
+                createPoint(
                         "Парк",
-                        53.228981,
-                        50.169918,
+                        new GeoJsonPoint(50.169918, 53.228981),
                         "Загородный центральный парк культуры и отдыха имени М. Горького, Октябрьский район, городской округ Самара",
                         "Центральный парк культуры и отдыха им. М. Горького",
                         "Центральный парк культуры и отдыха им. М. Горького (Загородный парк) — самый большой парк в Самаре, государственный памятник природы. Парк площадью 42,4 гектара располагается между берегом реки Волги и Ново-Садовой улицей",
@@ -28,10 +28,9 @@ public class PointsMigration {
                                 "opening_hours", "10:00-20:00",
                                 "website", "https://samarazagorod.narod.ru/"
                         )),
-                createParkPoint(
+                createPoint(
                         "Парк",
-                        53.227925,
-                        50.199265,
+                        new GeoJsonPoint(50.199265, 53.227925),
                         "парк культуры и отдыха имени Юрия Гагарина, Промышленный район, городской округ Самара",
                         "Парк культуры и отдыха имени Ю. А. Гагарина",
                         "Парк культуры и отдыха имени Ю. А. Гагарина — это популярное место для семейного отдыха в Самаре.",
@@ -39,10 +38,9 @@ public class PointsMigration {
                                 "opening_hours", "Круглосуточно",
                                 "website", "https://parki-samara.ru/park-im-yu-gagarina/"
                         )),
-                createParkPoint(
+                createPoint(
                         "Парк",
-                        53.243263,
-                        50.222251,
+                        new GeoJsonPoint(50.222251, 53.243263),
                         "парк Воронежские озёра, Промышленный район, городской округ Самара",
                         "Воронежские озера",
                         "«Воронежские озёра» — это парк культуры и отдыха, расположенный в Промышленном районе Самары. Он включает в себя три озера и многолетние дубы, признанные памятниками природы.",
@@ -59,16 +57,15 @@ public class PointsMigration {
         mongoTemplate.dropCollection("point");
     }
 
-    private PointDocument createParkPoint(
+    private PointDocument createPoint(
             String type,
-            double latitude,
-            double longitude,
+            GeoJsonPoint geo,
             String address,
             String name,
             String review,
             Map<String, String> attributes
     ) {
         LocationData location = new LocationData(name, review, new HashMap<>(attributes));
-        return new PointDocument(null, type, latitude, longitude, address, location);
+        return new PointDocument(null, type, geo, address, location);
     }
 }

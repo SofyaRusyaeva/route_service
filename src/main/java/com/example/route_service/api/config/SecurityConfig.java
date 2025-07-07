@@ -2,6 +2,8 @@ package com.example.route_service.api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,23 +20,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable()) // Отключаем CSRF для API
-                .authorizeHttpRequests(auth -> auth
-                                .requestMatchers(
-                                        "/auth",
-                                        "/swagger-ui/**",
-                                        "/v3/api-docs/**",
-                                        "/swagger-resources/**",
-                                        "/webjars/**"
-                                ).permitAll()
-//                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+//        http
+//                .csrf(csrf -> csrf.disable()) // Отключаем CSRF для API
+//                .authorizeHttpRequests(auth -> auth
+//                                .requestMatchers(
+//                                        "/auth",
+//                                        "/swagger-ui/**",
+//                                        "/v3/api-docs/**",
+//                                        "/swagger-resources/**",
+//                                        "/webjars/**"
+//                                ).permitAll()
+////                        .anyRequest().authenticated()
+//                )
+//                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+//
+//        return http.build();
 
-        return http.build();
 
-        /*
                 http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         http.oauth2Login(Customizer.withDefaults())
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/auth"));
@@ -52,7 +54,7 @@ public class SecurityConfig {
                 })
         );
         return http.build();
-         */
+
     }
 
     @Bean

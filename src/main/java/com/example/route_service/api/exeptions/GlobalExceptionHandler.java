@@ -6,10 +6,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
-//@RestControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ObjectNotFoundException.class)
@@ -78,6 +79,16 @@ public class GlobalExceptionHandler {
                 Map.of(
                         "status", HttpStatus.FORBIDDEN.value(),
                         "message", "Access denied"
+                )
+        );
+    }
+
+    @ExceptionHandler(StateException.class)
+    public ResponseEntity<?> handleStateException(StateException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                Map.of(
+                        "status", HttpStatus.BAD_REQUEST.value(),
+                        "message", e.getMessage()
                 )
         );
     }

@@ -6,7 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
+import java.util.HashMap;
 import java.util.List;
+
+// TODO подумать над DTO (возможно разделить на ответ и запрос)
 
 @Data
 @AllArgsConstructor
@@ -17,4 +20,6 @@ public class RouteDto {
     List<String> pointsId;
 
     boolean isPublic;
+
+    HashMap<String, String> description;
 }

@@ -28,8 +28,9 @@ public class PointService {
         return pointRepository.findById(pointId)
                 .map(existingPoint -> {
                     existingPoint.setType(newPoint.getType());
-                    existingPoint.setLatitude(newPoint.getLatitude());
-                    existingPoint.setLongitude(newPoint.getLongitude());
+//                    existingPoint.setLatitude(newPoint.getLatitude());
+//                    existingPoint.setLongitude(newPoint.getLongitude());
+                    existingPoint.setLocation(newPoint.getLocation());
                     existingPoint.setAddress(newPoint.getAddress());
                     existingPoint.setLocationData(newPoint.getLocationData());
                     return pointRepository.save(existingPoint);

@@ -10,8 +10,7 @@ public class PointMapper {
         return new PointDocument(
                 null,
                 dto.getType(),
-                dto.getLatitude(),
-                dto.getLongitude(),
+                dto.getLocation(),
                 dto.getAddress(),
                 dto.getLocationData()
         );

@@ -1,8 +1,12 @@
+*И у маршрута, и у точки есть обратная связь?*
+
 ### Вместо RouteDocument - RouteTemplateDocument - шаблон предполагаемого маршрута
 
 *Нужны поля с названием, описанием, рейтингом маршрута?*
 
 *Кто может создавать маршруты?*
+
+*В маршруте нужно хранить id создателя и сохранившего пользователя?*
 
 *Добавить помимо id необходимую информацию о точках в документе маршрута?*
 
@@ -26,6 +30,7 @@ public class RouteTemplateDocument {
 
     @Field("is_public")
     boolean isPublic = false;
+    
 }
 ```
 
@@ -117,7 +122,6 @@ import java.time.Instant;
 
 public class VisitedPoint {
 
-    //Ссылка на PointDocument
     @Field("point_id")
     String pointId;
 
@@ -133,8 +137,6 @@ public class VisitedPoint {
     @Field("point_status")
     PointStatus pointStatus;
 
-    @Field("actual_location")
-    GeoJsonPoint actualLocation;
 }
 ```
 

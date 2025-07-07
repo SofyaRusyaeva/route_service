@@ -1,5 +1,6 @@
 package com.example.route_service.store.documents;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AccessLevel;
@@ -11,7 +12,10 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.util.HashMap;
 import java.util.List;
+
+// TODO написать mapper
 
 @Data
 @NoArgsConstructor
@@ -23,14 +27,21 @@ public class RouteDocument {
     @Id
     String routeId;
 
+    @Schema(description = "id пользователя создавшего маршрут")
     @NotBlank(message = "user_id cannot be blank")
-    @Field("userId")
+    @Field("user_id")
     String userId;
 
+    @Schema(description = "Список точек, составляющих маршрут")
     @NotEmpty(message = "Points cannot be empty")
-    @Field("pointsId")
+    @Field("points_id")
     List<String>pointsId;
 
-    @Field("isPublic")
+    @Schema(description = "Флаг публичности маршрута")
+    @Field("is_public")
     boolean isPublic = false;
+
+    @Schema(description = "Дополнительные сведения о маршруте (название, описание, рейтинг и т.д.)")
+    @Field("description")
+    HashMap<String, String> description;
 }

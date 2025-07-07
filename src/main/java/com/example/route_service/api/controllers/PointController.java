@@ -4,7 +4,9 @@ import com.example.route_service.api.dto.PointDto;
 import com.example.route_service.api.services.PointService;
 import com.example.route_service.store.documents.PointDocument;
 import jakarta.validation.Valid;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,10 +14,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/points")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PointController {
 
-    private final PointService pointService;
-
+    PointService pointService;
 
     @GetMapping("/{pointId}")
     public ResponseEntity<PointDocument> getPointById(@PathVariable String pointId) {
