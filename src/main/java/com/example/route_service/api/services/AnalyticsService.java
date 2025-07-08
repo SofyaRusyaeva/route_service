@@ -3,29 +3,142 @@ package com.example.route_service.api.services;
 import com.example.route_service.api.exeptions.ObjectNotFoundException;
 import com.example.route_service.store.documents.PassageDocument;
 import com.example.route_service.store.documents.RouteDocument;
-import com.example.route_service.store.documents.models.Analysis;
+import com.example.route_service.store.documents.models.PassageAnalytics;
+import com.example.route_service.store.documents.models.RouteAnalytics;
 import com.example.route_service.store.documents.models.VisitedPoint;
+import com.example.route_service.store.enums.PassageStatus;
+import com.example.route_service.store.repositories.PassageRepository;
 import com.example.route_service.store.repositories.RouteRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class AnalyticsService {
 
     RouteRepository routeRepository;
+    PassageRepository passageRepository;
 
-//    @Scheduled()
-//    public void aggregate() {
-//
-//    }
+    @Scheduled(cron = "0 0 * * * ?")
+    @Transactional
+    public void fullAnalysis() {
+        log.info("Analysis is started");
 
-    public Analysis integrityCheck(PassageDocument passage) {
+        Set<String> updatedRouteIds = aggregatePassage();
+
+        if (updatedRouteIds.isEmpty()) {
+            return;
+        }
+
+        for (String routeId : updatedRouteIds) {
+            updateRoute(routeId);
+        }
+
+        log.info("Analysis is finished");
+    }
+
+    private void updateRoute(String routeId) {
+
+        RouteDocument route = routeRepository.findById(routeId).orElseThrow(
+                () -> new ObjectNotFoundException(String.format("Route %s not found", routeId))
+        );
+
+        List<PassageDocument> passages = passageRepository.findAllByRouteIdAndStatus(routeId, PassageStatus.COMPLETED);
+        if (passages.isEmpty()) {
+            return;
+        }
+
+        double totalRating = 0;
+        int ratingsCount = 0;
+
+        long totalDuration = 0;
+
+        double totalCoverage = 0;
+        double totalOrder = 0;
+
+        int analysisCount = 0;
+
+        Map<String, Long> missedPointFrequency = new HashMap<>();
+        Map<String, Long> extraPointFrequency = new HashMap<>();
+        Map<String, Long> outOfOrderPointFrequency = new HashMap<>();
+
+        for (PassageDocument passage : passages) {
+            if (passage.getFeedback() != null && passage.getFeedback().getRating() != null) {
+                totalRating += passage.getFeedback().getRating();
+                ratingsCount++;
+            }
+
+            if (passage.getStartTime() != null && passage.getEndTime() != null) {
+                totalDuration += Duration.between(passage.getStartTime(), passage.getEndTime()).toSeconds();
+            }
+
+            PassageAnalytics analysis = passage.getPassageAnalytics();
+            if (analysis != null) {
+                totalCoverage += analysis.getCoverage();
+                totalOrder += analysis.getOrder();
+                analysisCount++;
+
+                analysis.getMissedPoints().forEach(pointId -> missedPointFrequency.merge(pointId, 1L, Long::sum));
+                analysis.getExtraPoints().forEach(pointId -> extraPointFrequency.merge(pointId, 1L, Long::sum));
+                analysis.getOutOfOrderPoints().forEach(pointId -> outOfOrderPointFrequency.merge(pointId, 1L, Long::sum));
+            }
+        }
+        RouteAnalytics analysis = route.getRouteAnalytics();
+
+        analysis.setTotalCompletions(passages.size());
+        analysis.setAvgRating(ratingsCount > 0 ? totalRating / ratingsCount : null);
+        analysis.setAvgDuration(!passages.isEmpty() ? (double) totalDuration / passages.size() : null);
+        analysis.setAvgCoverage(analysisCount > 0 ? totalCoverage / analysisCount : null);
+        analysis.setAvgOrder(analysisCount > 0 ? totalOrder / analysisCount : null);
+        analysis.setMissedPointsFrequency(missedPointFrequency);
+        analysis.setExtraPointsFrequency(extraPointFrequency);
+        analysis.setOutOfOrderPointsFrequency(outOfOrderPointFrequency);
+
+        routeRepository.save(route);
+
+
+    }
+
+    public Set<String> aggregatePassage() {
+        Set<String> passedRouteIds = new HashSet<>();
+        try (Stream<PassageDocument> passagesToAnalyze = passageRepository.findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED)) {
+            passagesToAnalyze.forEach(passage -> {
+                try {
+                    log.info("Analyzing passage with id: {}", passage.getPassageId());
+
+                    PassageAnalytics passageAnalytics = integrityCheck(passage);
+                    passage.setPassageAnalytics(passageAnalytics);
+                    passage.setAnalyzed(true);
+                    passageRepository.save(passage);
+                    passedRouteIds.add(passage.getRouteId());
+
+                    log.info("Successfully analyzed and saved passage with id: {}", passage.getPassageId());
+
+                } catch (ObjectNotFoundException e) {
+                    log.error("Failed to analyze passage {}: {}. Marking as analyzed to avoid retries.", passage.getPassageId(), e.getMessage());
+                    passage.setAnalyzed(true);
+                    passageRepository.save(passage);
+                } catch (Exception e) {
+                    log.error("An unexpected error occurred while analyzing passage {}:", passage.getPassageId(), e);
+                }
+            });
+        }
+        return passedRouteIds;
+    }
+
+
+    private PassageAnalytics integrityCheck(PassageDocument passage) {
 
         RouteDocument route = routeRepository.findById(passage.getRouteId()).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Route %s not found", passage.getRouteId()))
@@ -56,10 +169,10 @@ public class AnalyticsService {
 
 
         // TODO подумать над расчетом coverage
-        double coverage = (double) (routeSet.size() - missedPoints.size()) / passageSet.size();
+        double coverage = (double) (routeSet.size() - missedPoints.size()) / routeSet.size();
         double order = (double) lcsSequence.size() / routePointIds.size();
 
-        return new Analysis(coverage, order, missedPoints.stream().toList(), extraPoints.stream().toList(), outOfOrderPoints.stream().toList());
+        return new PassageAnalytics(coverage, order, missedPoints.stream().toList(), extraPoints.stream().toList(), outOfOrderPoints.stream().toList());
     }
 
     private List<String> calculateLCS(List<String> routePointIds, List<String> passagePointIds) {

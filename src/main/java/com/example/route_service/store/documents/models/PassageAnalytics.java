@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Analysis {
+public class PassageAnalytics {
 
     double coverage;
 

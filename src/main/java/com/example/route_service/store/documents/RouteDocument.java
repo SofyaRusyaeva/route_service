@@ -1,5 +1,6 @@
 package com.example.route_service.store.documents;
 
+import com.example.route_service.store.documents.models.RouteAnalytics;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -44,4 +45,7 @@ public class RouteDocument {
     @Schema(description = "Дополнительные сведения о маршруте (название, описание, рейтинг и т.д.)")
     @Field("description")
     HashMap<String, String> description;
+
+    @Field("route_analytics")
+    RouteAnalytics routeAnalytics;
 }

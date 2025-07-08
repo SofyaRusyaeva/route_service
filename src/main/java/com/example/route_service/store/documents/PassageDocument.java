@@ -1,8 +1,8 @@
 package com.example.route_service.store.documents;
 
 
-import com.example.route_service.store.documents.models.Analysis;
 import com.example.route_service.store.documents.models.Feedback;
+import com.example.route_service.store.documents.models.PassageAnalytics;
 import com.example.route_service.store.documents.models.VisitedPoint;
 import com.example.route_service.store.enums.PassageStatus;
 import jakarta.validation.constraints.NotBlank;
@@ -57,6 +57,9 @@ public class PassageDocument {
     @Field("feedback")
     Feedback feedback;
 
-    @Field("analysis")
-    Analysis analysis;
+    @Field("passage_analytics")
+    PassageAnalytics passageAnalytics;
+
+    @Field("is_analyzed")
+    boolean isAnalyzed = false;
 }

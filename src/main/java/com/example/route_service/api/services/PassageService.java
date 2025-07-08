@@ -5,7 +5,6 @@ import com.example.route_service.api.dto.StartPassageResponse;
 import com.example.route_service.api.exeptions.ObjectNotFoundException;
 import com.example.route_service.api.exeptions.StateException;
 import com.example.route_service.store.documents.PassageDocument;
-import com.example.route_service.store.documents.models.Analysis;
 import com.example.route_service.store.documents.models.Feedback;
 import com.example.route_service.store.enums.PassageStatus;
 import com.example.route_service.store.repositories.PassageRepository;
@@ -60,8 +59,6 @@ public class PassageService {
         passage.setFeedback(new Feedback(request.getRating(), request.getComment()));
         passage.setPassageStatus(PassageStatus.COMPLETED);
 
-        Analysis analysis = analyticsService.integrityCheck(passage);
-        passage.setAnalysis(analysis);
 
         passageRepository.save(passage);
     }
@@ -77,10 +74,6 @@ public class PassageService {
         passage.setEndTime(Instant.now());
         passage.setFeedback(new Feedback(request.getRating(), request.getComment()));
         passage.setPassageStatus(PassageStatus.CANCELLED);
-
-        // надо в незавершенном маршруте сравнивать точки?
-        Analysis analysis = analyticsService.integrityCheck(passage);
-        passage.setAnalysis(analysis);
 
         passageRepository.save(passage);
     }
