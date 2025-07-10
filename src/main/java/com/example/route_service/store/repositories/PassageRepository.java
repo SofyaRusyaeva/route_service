@@ -14,4 +14,8 @@ public interface PassageRepository extends MongoRepository<PassageDocument, Stri
     Stream<PassageDocument> findAllByStatusAndIsAnalyzedIsFalse(PassageStatus status);
 
     List<PassageDocument> findAllByRouteIdAndStatus(String routeId, PassageStatus status);
+
+    long countByRouteId(String routeId);
+
+    long countByRouteIdAndStatus(String routeId, PassageStatus status);
 }

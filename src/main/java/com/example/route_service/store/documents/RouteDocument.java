@@ -47,5 +47,5 @@ public class RouteDocument {
     HashMap<String, String> description;
 
     @Field("route_analytics")
-    RouteAnalytics routeAnalytics;
+    RouteAnalytics routeAnalytics = new RouteAnalytics();
 }

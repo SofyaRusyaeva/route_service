@@ -30,7 +30,7 @@ public class AnalyticsService {
     RouteRepository routeRepository;
     PassageRepository passageRepository;
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 * * * * ?")
     @Transactional
     public void fullAnalysis() {
         log.info("Analysis is started");
@@ -73,6 +73,9 @@ public class AnalyticsService {
         Map<String, Long> extraPointFrequency = new HashMap<>();
         Map<String, Long> outOfOrderPointFrequency = new HashMap<>();
 
+        Map<String, Long> totalPointDurations = new HashMap<>();
+        Map<String, Long> pointVisitCount = new HashMap<>();
+
         for (PassageDocument passage : passages) {
             if (passage.getFeedback() != null && passage.getFeedback().getRating() != null) {
                 totalRating += passage.getFeedback().getRating();
@@ -93,20 +96,46 @@ public class AnalyticsService {
                 analysis.getExtraPoints().forEach(pointId -> extraPointFrequency.merge(pointId, 1L, Long::sum));
                 analysis.getOutOfOrderPoints().forEach(pointId -> outOfOrderPointFrequency.merge(pointId, 1L, Long::sum));
             }
-        }
-        RouteAnalytics analysis = route.getRouteAnalytics();
 
-        analysis.setTotalCompletions(passages.size());
-        analysis.setAvgRating(ratingsCount > 0 ? totalRating / ratingsCount : null);
-        analysis.setAvgDuration(!passages.isEmpty() ? (double) totalDuration / passages.size() : null);
-        analysis.setAvgCoverage(analysisCount > 0 ? totalCoverage / analysisCount : null);
-        analysis.setAvgOrder(analysisCount > 0 ? totalOrder / analysisCount : null);
-        analysis.setMissedPointsFrequency(missedPointFrequency);
-        analysis.setExtraPointsFrequency(extraPointFrequency);
-        analysis.setOutOfOrderPointsFrequency(outOfOrderPointFrequency);
+            for (VisitedPoint point : passage.getVisitedPoints()) {
+                if (point.getPointId() != null && point.getEntryTime() != null && point.getExitTime() != null) {
+                    long durationOnPoint = Duration.between(point.getEntryTime(), point.getExitTime()).toSeconds();
+                    totalPointDurations.merge(point.getPointId(), durationOnPoint, Long::sum);
+                    pointVisitCount.merge(point.getPointId(), 1L, Long::sum);
+                }
+            }
+        }
+        RouteAnalytics analytics = route.getRouteAnalytics();
+        if (analytics == null) {
+            analytics = new RouteAnalytics();
+            route.setRouteAnalytics(analytics);
+        }
+
+        long totalStarts = passageRepository.countByRouteId(routeId);
+        long totalCancellations = passageRepository.countByRouteIdAndStatus(routeId, PassageStatus.CANCELLED);
+
+        Map<String, Long> avgPointDurations = new HashMap<>();
+        for (String pointId : pointVisitCount.keySet()) {
+            long total = totalPointDurations.get(pointId);
+            long count = totalPointDurations.get(pointId);
+            if (count > 0) {
+                avgPointDurations.put(pointId, total / count);
+            }
+        }
+
+        analytics.setTotalCompletions(passages.size());
+        analytics.setAvgRating(ratingsCount > 0 ? totalRating / ratingsCount : null);
+        analytics.setAvgDuration(!passages.isEmpty() ? (double) totalDuration / passages.size() : null);
+        analytics.setAvgCoverage(analysisCount > 0 ? totalCoverage / analysisCount : null);
+        analytics.setAvgOrder(analysisCount > 0 ? totalOrder / analysisCount : null);
+        analytics.setMissedPointsFrequency(missedPointFrequency);
+        analytics.setExtraPointsFrequency(extraPointFrequency);
+        analytics.setOutOfOrderPointsFrequency(outOfOrderPointFrequency);
+        analytics.setTotalStarts(totalStarts);
+        analytics.setTotalCancellations(totalCancellations);
+        analytics.setAveragePointDurations(avgPointDurations);
 
         routeRepository.save(route);
-
 
     }
 

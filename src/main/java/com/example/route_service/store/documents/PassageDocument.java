@@ -18,6 +18,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -41,7 +42,7 @@ public class PassageDocument {
 
     @Field("route_status")
     @NotNull
-    PassageStatus passageStatus;
+    PassageStatus status;
 
     @Field("start_time")
     @NotNull
@@ -52,7 +53,7 @@ public class PassageDocument {
     Instant endTime;
 
     @Field("visited_points")
-    List<VisitedPoint> visitedPoints;
+    List<VisitedPoint> visitedPoints = new ArrayList<>();
 
     @Field("feedback")
     Feedback feedback;

@@ -28,4 +28,6 @@ public class RouteAnalytics {
     Map<String, Long> extraPointsFrequency;
     Map<String, Long> outOfOrderPointsFrequency;
 
+    Map<String, Long> averagePointDurations;
+
 }

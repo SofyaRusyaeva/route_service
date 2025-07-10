@@ -40,7 +40,7 @@ public class PassageService {
 
         passage.setUserId(userId);
         passage.setRouteId(routeId);
-        passage.setPassageStatus(PassageStatus.IN_PROGRESS);
+        passage.setStatus(PassageStatus.IN_PROGRESS);
         passage.setStartTime(Instant.now());
 
         passageRepository.save(passage);
@@ -57,7 +57,7 @@ public class PassageService {
 
         passage.setEndTime(Instant.now());
         passage.setFeedback(new Feedback(request.getRating(), request.getComment()));
-        passage.setPassageStatus(PassageStatus.COMPLETED);
+        passage.setStatus(PassageStatus.COMPLETED);
 
 
         passageRepository.save(passage);
@@ -73,7 +73,7 @@ public class PassageService {
 
         passage.setEndTime(Instant.now());
         passage.setFeedback(new Feedback(request.getRating(), request.getComment()));
-        passage.setPassageStatus(PassageStatus.CANCELLED);
+        passage.setStatus(PassageStatus.CANCELLED);
 
         passageRepository.save(passage);
     }
@@ -84,7 +84,7 @@ public class PassageService {
                 () -> new ObjectNotFoundException(String.format("Passage %s not found", passageId))
         );
 
-        if (passage.getPassageStatus() != PassageStatus.IN_PROGRESS)
+        if (passage.getStatus() != PassageStatus.IN_PROGRESS)
             throw new StateException("Passage is already finished or canceled");
 
         // TODO исправить исключение
