@@ -27,11 +27,9 @@ public class VisitedPoint {
     Instant entryTime;
 
     @Field("exit_time")
-    @NotNull
     Instant exitTime;
 
     @Field("point_status")
-    @NotNull
     PointStatus pointStatus;
 
     @Field("feedback")

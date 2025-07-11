@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -43,8 +44,11 @@ public class GlobalExceptionHandler {
         );
     }
 
+    //
 //    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+//    public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
+
+    /// /        log.error("Unhandled exception occurred", e);
 //        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
 //                Map.of(
 //                        "status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -55,10 +59,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationException(MethodArgumentNotValidException e) {
+        List<String> errors = e.getBindingResult().getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 Map.of(
                         "status", HttpStatus.BAD_REQUEST.value(),
-                        "message", e.getBindingResult().getAllErrors().get(0).getDefaultMessage()
+                        "errors", errors
                 )
         );
     }

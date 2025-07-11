@@ -33,11 +33,10 @@ public class RouteTrackingConsumer {
             passageRepository.findById(event.getPassageId()).ifPresentOrElse(
                     passage -> {
                         if ("POINT_ARRIVED".equals(event.getEventType())) {
-                            log.info("Received event: {}", event.getEventType());
+                            pointArrived(passage, event);
 
                         } else if ("POINT_DEPARTED".equals(event.getEventType())) {
-                            log.info("Received event: {}", event.getEventType());
-
+                            pointDeparted(passage, event);
                         }
                         passageRepository.save(passage);
                     },

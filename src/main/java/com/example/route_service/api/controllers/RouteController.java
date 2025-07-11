@@ -1,9 +1,9 @@
 package com.example.route_service.api.controllers;
 
 
-import com.example.route_service.api.dto.RouteDto;
+import com.example.route_service.api.dto.RouteRequest;
+import com.example.route_service.api.dto.RouteResponse;
 import com.example.route_service.api.services.RouteService;
-import com.example.route_service.store.documents.RouteDocument;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -23,27 +23,27 @@ public class RouteController {
     RouteService routeService;
 
     @GetMapping()
-    public ResponseEntity<List<RouteDocument>> getMyRoutes() {
-        return ResponseEntity.ok(routeService.getRoutes());
+    public ResponseEntity<List<RouteResponse>> getMyRoutes() {
+        return ResponseEntity.ok(routeService.getMyRoutes());
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<List<RouteDocument>> getUserRoutes(@PathVariable String userId) {
+    public ResponseEntity<List<RouteResponse>> getUserRoutes(@PathVariable String userId) {
         return ResponseEntity.ok(routeService.getUserRoutes(userId));
     }
 
     @PostMapping
-    public ResponseEntity<RouteDocument> createRoute(@Valid @RequestBody RouteDto route) {
+    public ResponseEntity<RouteResponse> createRoute(@Valid @RequestBody RouteRequest route) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routeService.addRoute(route));
     }
 
     @PatchMapping("/{routeId}/points")
-    public ResponseEntity<RouteDocument> updateRoutePoints(@Valid @PathVariable String routeId, @Valid @RequestBody RouteDto newRoute) {
+    public ResponseEntity<RouteResponse> updateRoutePoints(@Valid @PathVariable String routeId, @Valid @RequestBody RouteRequest newRoute) {
         return ResponseEntity.ok(routeService.updateRoute(routeId, newRoute));
     }
 
     @PatchMapping("/{routeId}/visibility")
-    public ResponseEntity<RouteDocument> changeRouteVisibility(@PathVariable String routeId) {
+    public ResponseEntity<RouteResponse> changeRouteVisibility(@PathVariable String routeId) {
         return ResponseEntity.ok(routeService.changeVisibility(routeId));
     }
 

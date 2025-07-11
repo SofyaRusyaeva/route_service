@@ -2,35 +2,20 @@ package com.example.route_service.api.dto;
 
 import com.example.route_service.store.documents.models.LocationData;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
-// TODO подумать над DTO (возможно разделить на ответ и запрос)
-
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Schema(description = "Точка на карте")
-public class PointDto {
+public class PointResponse {
+
+    @Schema(description = "id точки")
+    String pointId;
 
     @Schema(description = "Тип точки, определяющий ее категорию", example = "Парк")
-    @NotBlank(message = "Type cannot be null")
     String type;
-
-//    @Schema(description = "Широта в градусах, диапазон от -90 до 90", example = "53.228981")
-//    @NotNull(message = "Latitude cannot be null")
-//    @Min(value = -90)
-//    @Max(value = 90)
-//    Double latitude;
-//
-//    @Schema(description = "Долгота в градусах, диапазон от -180 до 180", example = "50.169918")
-//    @NotNull(message = "Longitude cannot be null")
-//    @Min(value = -180)
-//    @Max(value = 180)
-//    Double longitude;
 
     GeoJsonPoint location;
 
@@ -38,6 +23,5 @@ public class PointDto {
     String address;
 
     @Schema(description = "Дополнительные данные о местоположении")
-    @Valid
     LocationData locationData;
 }

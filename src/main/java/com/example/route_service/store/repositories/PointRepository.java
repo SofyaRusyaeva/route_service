@@ -11,4 +11,7 @@ public interface PointRepository extends MongoRepository<PointDocument, String> 
     PointDocument findByPointId(String pointId);
 
     long countByPointIdIn(List<String> pointsId);
+
+    long deleteByPointId(String pointId);
+
 }

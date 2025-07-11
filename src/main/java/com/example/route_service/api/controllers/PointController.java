@@ -1,8 +1,8 @@
 package com.example.route_service.api.controllers;
 
-import com.example.route_service.api.dto.PointDto;
+import com.example.route_service.api.dto.PointRequest;
+import com.example.route_service.api.dto.PointResponse;
 import com.example.route_service.api.services.PointService;
-import com.example.route_service.store.documents.PointDocument;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -20,17 +20,17 @@ public class PointController {
     PointService pointService;
 
     @GetMapping("/{pointId}")
-    public ResponseEntity<PointDocument> getPointById(@PathVariable String pointId) {
+    public ResponseEntity<PointResponse> getPointById(@PathVariable String pointId) {
         return ResponseEntity.ok(pointService.getPointById(pointId));
     }
 
     @PutMapping("/{pointId}")
-    public ResponseEntity<PointDocument> updatePoint(@PathVariable String pointId, @Valid @RequestBody PointDto point) {
+    public ResponseEntity<PointResponse> updatePoint(@PathVariable String pointId, @Valid @RequestBody PointRequest point) {
         return ResponseEntity.ok(pointService.updatePoint(pointId, point));
     }
 
     @PostMapping
-    public ResponseEntity<PointDocument> addPoint(@Valid @RequestBody PointDto point) {
+    public ResponseEntity<PointResponse> addPoint(@Valid @RequestBody PointRequest point) {
         return ResponseEntity.ok(pointService.addPoint(point));
     }
 

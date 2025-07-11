@@ -1,18 +1,19 @@
 package com.example.route_service.api.mappers;
 
-import com.example.route_service.api.dto.PointDto;
+import com.example.route_service.api.dto.PointRequest;
+import com.example.route_service.api.dto.PointResponse;
 import com.example.route_service.store.documents.PointDocument;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class PointMapper {
-    public PointDocument toDocument(PointDto dto) {
-        return new PointDocument(
-                null,
-                dto.getType(),
-                dto.getLocation(),
-                dto.getAddress(),
-                dto.getLocationData()
-        );
-    }
+
+@Mapper(
+        componentModel = "spring"
+//        unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
+public interface PointMapper {
+    @Mapping(target = "pointId", ignore = true)
+    PointDocument toDocument(PointRequest request);
+
+    PointResponse toResponse(PointDocument document);
 }

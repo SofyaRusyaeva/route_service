@@ -1,7 +1,7 @@
 package com.example.route_service.api.controllers;
 
-import com.example.route_service.api.dto.PassageRequest;
-import com.example.route_service.api.dto.StartPassageResponse;
+import com.example.route_service.api.dto.PassageFeedbackRequest;
+import com.example.route_service.api.dto.PassageResponse;
 import com.example.route_service.api.services.PassageService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -20,23 +20,21 @@ public class PassageController {
     PassageService passageService;
 
     @PostMapping("routes/{routeId}/start")
-    public ResponseEntity<StartPassageResponse> startPassage(@PathVariable String routeId) {
+    public ResponseEntity<PassageResponse> startPassage(@PathVariable String routeId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(passageService.startPassage(routeId));
     }
 
     @PostMapping("/passage/{passageId}/finish")
-    public ResponseEntity<Void> finishPassage(@PathVariable String passageId,
-                                              @Valid @RequestBody PassageRequest request) {
-        passageService.finishPassage(passageId, request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<PassageResponse> finishPassage(@PathVariable String passageId,
+                                                         @Valid @RequestBody PassageFeedbackRequest request) {
+        return ResponseEntity.ok(passageService.finishPassage(passageId, request));
     }
 
     @PostMapping("/passage/{passageId}/cancel")
-    public ResponseEntity<Void> cancelPassage(@PathVariable String passageId,
-                                              @Valid @RequestBody PassageRequest request) {
+    public ResponseEntity<PassageResponse> cancelPassage(@PathVariable String passageId,
+                                                         @Valid @RequestBody PassageFeedbackRequest request) {
 
-        passageService.cancelPassage(passageId, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(passageService.cancelPassage(passageId, request));
     }
 
 }

@@ -45,11 +45,9 @@ public class PassageDocument {
     PassageStatus status;
 
     @Field("start_time")
-    @NotNull
     Instant startTime;
 
     @Field("end_time")
-    @NotNull
     Instant endTime;
 
     @Field("visited_points")
