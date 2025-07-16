@@ -19,7 +19,7 @@ public class PassageResponse {
     String passageId;
     String userId;
     String routeId;
-    PassageStatus passageStatus;
+    PassageStatus status;
     Instant startTime;
     Instant endTime;
     List<VisitedPoint> visitedPoints;

@@ -149,12 +149,12 @@ public class RouteService {
         if (pointIds.isEmpty()) {
             return Collections.emptyList();
         }
+        Set<String> uniquePointIds = new HashSet<>(pointIds);
+        List<PointDocument> points = pointRepository.findAllById(uniquePointIds);
 
-        List<PointDocument> points = pointRepository.findAllById(pointIds);
-
-        if (points.size() != pointIds.size()) {
+        if (points.size() != uniquePointIds.size()) {
             Set<String> foundIds = points.stream().map(PointDocument::getPointId).collect(Collectors.toSet());
-            List<String> missingIds = pointIds.stream().filter(id -> !foundIds.contains(id)).toList();
+            List<String> missingIds = uniquePointIds.stream().filter(id -> !foundIds.contains(id)).toList();
             throw new InvalidObjectIdException("One or more points do not exist in the database" + missingIds);
         }
 

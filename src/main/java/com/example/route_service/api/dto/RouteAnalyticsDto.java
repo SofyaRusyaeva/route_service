@@ -15,7 +15,11 @@ public class RouteAnalyticsDto {
 
     String routeId;
     long totalStarts;
-    long totalCompletions;
+//    long totalCompletions;
+//    long totalCancellations;
+
+    Double completionsPercent;
+    Double cancellationsPercent;
 
     Double avgRating;
     Double avgDuration;

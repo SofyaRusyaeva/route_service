@@ -11,5 +11,4 @@ public interface PassageMapper {
     PassageResponse toResponse(PassageDocument document);
 
     Feedback toFeedback(PassageFeedbackRequest request);
-
 }

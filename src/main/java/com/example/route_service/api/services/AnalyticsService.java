@@ -2,10 +2,10 @@ package com.example.route_service.api.services;
 
 import com.example.route_service.api.dto.RouteAnalyticsDto;
 import com.example.route_service.api.exeptions.ObjectNotFoundException;
-import com.example.route_service.api.mappers.RouteMapper;
 import com.example.route_service.store.documents.PassageDocument;
 import com.example.route_service.store.documents.RouteDocument;
 import com.example.route_service.store.documents.models.PassageAnalytics;
+import com.example.route_service.store.documents.models.RouteAnalytics;
 import com.example.route_service.store.documents.models.VisitedPoint;
 import com.example.route_service.store.enums.PassageStatus;
 import com.example.route_service.store.repositories.PassageRepository;
@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Stream;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,14 +31,43 @@ public class AnalyticsService {
     RouteRepository routeRepository;
     PassageRepository passageRepository;
     AtomicUpdateService atomicUpdateService;
-    RouteMapper routeMapper;
 
     public RouteAnalyticsDto getAnalytics(String routeId) {
         RouteDocument route = routeRepository.findById(routeId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Route %s not found", routeId))
         );
 
-        return routeMapper.toAnalytics(route);
+//        return routeMapper.toAnalytics(route);
+        RouteAnalytics analytics = route.getRouteAnalytics();
+
+        if (analytics == null) {
+            return null;
+        }
+        Double avgRating = avg(analytics.getTotalRating(), analytics.getRatingsCount());
+        Double avgOrder = avg(analytics.getTotalOrder(), analytics.getPassagesAnalyzedCount());
+        Double avgCoverage = avg(analytics.getTotalCoverage(), analytics.getPassagesAnalyzedCount());
+        Double avgDuration = avg(analytics.getTotalDuration(), analytics.getTotalCompletions());
+        Double completionsPercent = avg(analytics.getTotalCompletions(), analytics.getTotalStarts());
+        Double cancellationPercent = avg(analytics.getTotalCancellations(), analytics.getTotalStarts());
+
+        Map<String, Double> avgPointDurations = avgPointDurations(analytics.getTotalPointDurations(), analytics.getPointVisitCount());
+
+        return new RouteAnalyticsDto(
+                route.getRouteId(),
+                analytics.getTotalStarts(),
+//                analytics.getTotalCompletions(),
+//                analytics.getTotalCancellations(),
+                completionsPercent,
+                cancellationPercent,
+                avgRating,
+                avgDuration,
+                avgCoverage,
+                avgOrder,
+                analytics.getMissedPointsFrequency(),
+                analytics.getExtraPointsFrequency(),
+                analytics.getOutOfOrderPointsFrequency(),
+                avgPointDurations
+        );
     }
 
     @Scheduled(cron = "${analytics.cron.expression}")
@@ -54,34 +84,47 @@ public class AnalyticsService {
         List<PassageDocument> updatedPassages = new ArrayList<>();
         Set<String> affectedRouteIds = new HashSet<>();
 
-        try (Stream<PassageDocument> passagesToAnalyze = passageRepository.findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED)) {
-            passagesToAnalyze.forEach(passage -> {
-                try {
-                    log.info("Analyzing passage with id: {}", passage.getPassageId());
+        List<PassageDocument> passagesToAnalyze = passageRepository
+                .findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED).toList();
+        if (passagesToAnalyze.isEmpty()) {
+            log.info("No new passages to analyze.");
+            return Collections.emptySet();
+        }
 
-                    RouteDocument route = routeRepository.findById(passage.getRouteId()).orElseThrow(
-                            () -> new ObjectNotFoundException(String.format("Route %s not found", passage.getRouteId()))
-                    );
+        Set<String> routeIds = passagesToAnalyze.stream()
+                .map(PassageDocument::getRouteId)
+                .collect(Collectors.toSet());
 
-                    PassageAnalytics passageAnalytics = integrityCheck(passage, route);
-                    passage.setPassageAnalytics(passageAnalytics);
+        Map<String, RouteDocument> routeCache = routeRepository.findAllById(routeIds).stream()
+                .collect(Collectors.toMap(RouteDocument::getRouteId, Function.identity()));
 
-//                    updateRouteAnalytics(passage);
-                    atomicUpdateService.aggregatePassageAnalytics(passage);
+        for (PassageDocument passage : passagesToAnalyze) {
+            try {
+                log.info("Analyzing passage with id: {}", passage.getPassageId());
 
-                    passage.setAnalyzed(true);
-                    updatedPassages.add(passage);
-                    affectedRouteIds.add(passage.getRouteId());
-                    log.info("Successfully analyzed passage with id: {}", passage.getPassageId());
-
-                } catch (ObjectNotFoundException e) {
-                    log.error("Failed to analyze passage {}: {}. Marking as analyzed to avoid retries.", passage.getPassageId(), e.getMessage());
-                    passage.setAnalyzed(true);
-                    updatedPassages.add(passage);
-                } catch (Exception e) {
-                    log.error("An unexpected error occurred while analyzing passage {}:", passage.getPassageId(), e);
+                RouteDocument route = routeCache.get(passage.getRouteId());
+                if (route == null) {
+                    throw new ObjectNotFoundException(String.format("Route %s in passage %s, was not found.",
+                            passage.getRouteId(), passage.getPassageId()));
                 }
-            });
+
+                PassageAnalytics passageAnalytics = integrityCheck(passage, route);
+                passage.setPassageAnalytics(passageAnalytics);
+
+                atomicUpdateService.aggregatePassageAnalytics(passage);
+
+                passage.setAnalyzed(true);
+                updatedPassages.add(passage);
+                affectedRouteIds.add(passage.getRouteId());
+                log.info("Successfully analyzed passage with id: {}", passage.getPassageId());
+
+            } catch (ObjectNotFoundException e) {
+                log.error("Failed to analyze passage {}: {}. Marking as analyzed to avoid retries.", passage.getPassageId(), e.getMessage());
+                passage.setAnalyzed(true);
+                updatedPassages.add(passage);
+            } catch (Exception e) {
+                log.error("An unexpected error occurred while analyzing passage {}:", passage.getPassageId(), e);
+            }
         }
         if (!updatedPassages.isEmpty()) {
             passageRepository.saveAll(updatedPassages);
@@ -89,41 +132,75 @@ public class AnalyticsService {
         return affectedRouteIds;
     }
 
-    private PassageAnalytics integrityCheck(PassageDocument passage, RouteDocument route) {
-
-//        RouteDocument route = routeRepository.findById(passage.getRouteId()).orElseThrow(
-//                () -> new ObjectNotFoundException(String.format("Route %s not found", passage.getRouteId()))
-//        );
+    public PassageAnalytics integrityCheck(PassageDocument passage, RouteDocument route) {
 
         List<String> routePointIds = route.getPointsId();
         List<String> passagePointsIds = passage.getVisitedPoints().stream()
                 .map(VisitedPoint::getPointId).toList();
 
-        Set<String> routeSet = new HashSet<>(routePointIds);
-        Set<String> passageSet = new HashSet<>(passagePointsIds);
+        Map<String, Long> routeFreq = routePointIds.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        Map<String, Long> passageFreq = passagePointsIds.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-        Set<String> missedPoints = new HashSet<>(routeSet);
-        missedPoints.removeAll(passageSet);
+        List<String> missedPoints = new ArrayList<>();
+        routeFreq.forEach((point, requiredCount) -> {
+            long visitedCount = passageFreq.getOrDefault(point, 0L);
+            if (visitedCount < requiredCount) {
+                missedPoints.add(point);
+            }
+        });
 
-        Set<String> extraPoints = new HashSet<>(passageSet);
-        extraPoints.removeAll(routeSet);
-
+        List<String> extraPoints = new ArrayList<>();
+        passageFreq.forEach((point, visitedCount) -> {
+            long requiredCount = routeFreq.getOrDefault(point, 0L);
+            if (requiredCount < visitedCount) {
+                extraPoints.add(point);
+            }
+        });
 
         List<String> lcsSequence = calculateLCS(routePointIds, passagePointsIds);
-        Set<String> lcsSet = new HashSet<>(lcsSequence);
+        List<String> outOfOrderPoints = new ArrayList<>(passagePointsIds);
+        for (String lcsPoint : lcsSequence) {
+            outOfOrderPoints.remove(lcsPoint);
+        }
+        for (String extraPoint : extraPoints) {
+            outOfOrderPoints.remove(extraPoint);
+        }
 
-        Set<String> common = new HashSet<>(routeSet);
-        common.retainAll(passageSet);
+        double coverage = routePointIds.isEmpty() ? 0.0 : (double) (routePointIds.size() - missedPoints.size()) / routePointIds.size();
+        double order = routePointIds.isEmpty() ? 0.0 : (double) lcsSequence.size() / routePointIds.size();
 
-        Set<String> outOfOrderPoints = new HashSet<>(common);
-        outOfOrderPoints.removeAll(lcsSet);
-
-
-        // TODO подумать над расчетом coverage
-        double coverage = (double) (routeSet.size() - missedPoints.size()) / routeSet.size();
-        double order = (double) lcsSequence.size() / routePointIds.size();
-
-        return new PassageAnalytics(coverage, order, missedPoints.stream().toList(), extraPoints.stream().toList(), outOfOrderPoints.stream().toList());
+        return new PassageAnalytics(coverage, order, missedPoints, extraPoints, outOfOrderPoints);
+//        List<String> routePointIds = route.getPointsId();
+//        List<String> passagePointsIds = passage.getVisitedPoints().stream()
+//                .map(VisitedPoint::getPointId).toList();
+//
+//        Set<String> routeSet = new HashSet<>(routePointIds);
+//        Set<String> passageSet = new HashSet<>(passagePointsIds);
+//
+//        Set<String> missedPoints = new HashSet<>(routeSet);
+//        missedPoints.removeAll(passageSet);
+//
+//        Set<String> extraPoints = new HashSet<>(passageSet);
+//        extraPoints.removeAll(routeSet);
+//
+//
+//        List<String> lcsSequence = calculateLCS(routePointIds, passagePointsIds);
+//        Set<String> lcsSet = new HashSet<>(lcsSequence);
+//
+//        Set<String> common = new HashSet<>(routeSet);
+//        common.retainAll(passageSet);
+//
+//        Set<String> outOfOrderPoints = new HashSet<>(common);
+//        outOfOrderPoints.removeAll(lcsSet);
+//
+//
+//        // TODO подумать над расчетом coverage
+//        double coverage = (double) (routeSet.size() - missedPoints.size()) / routeSet.size();
+//        double order = (double) lcsSequence.size() / routePointIds.size();
+//
+//        return new PassageAnalytics(coverage, order, missedPoints.stream().toList(), extraPoints.stream().toList(), outOfOrderPoints.stream().toList());
     }
 
     private List<String> calculateLCS(List<String> routePointIds, List<String> passagePointIds) {
@@ -162,4 +239,24 @@ public class AnalyticsService {
         return lcsSequence;
     }
 
+    private Map<String, Double> avgPointDurations(Map<String, Long> totalPointDurations, Map<String, Long> pointVisitCount) {
+        if (pointVisitCount == null || pointVisitCount.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, Double> resultMap = new HashMap<>();
+
+        pointVisitCount.forEach((pointId, count) -> {
+            long totalDuration = totalPointDurations.getOrDefault(pointId, 0L);
+            resultMap.put(pointId, (double) totalDuration / count);
+        });
+
+        return resultMap;
+    }
+
+    private Double avg(Number total, Long count) {
+        if (total == null || count == null || count == 0) {
+            return null;
+        }
+        return total.doubleValue() / count;
+    }
 }
