@@ -37,15 +37,14 @@ public class AnalyticsService {
                 () -> new ObjectNotFoundException(String.format("Route %s not found", routeId))
         );
 
-//        return routeMapper.toAnalytics(route);
         RouteAnalytics analytics = route.getRouteAnalytics();
 
         if (analytics == null) {
             return null;
         }
         Double avgRating = avg(analytics.getTotalRating(), analytics.getRatingsCount());
-        Double avgOrder = avg(analytics.getTotalOrder(), analytics.getPassagesAnalyzedCount());
-        Double avgCoverage = avg(analytics.getTotalCoverage(), analytics.getPassagesAnalyzedCount());
+        Double avgOrder = avg(analytics.getTotalOrder(), analytics.getTotalCompletions()); // analytics.getPassagesAnalyzedCount()
+        Double avgCoverage = avg(analytics.getTotalCoverage(), analytics.getTotalCompletions()); // analytics.getPassagesAnalyzedCount()
         Double avgDuration = avg(analytics.getTotalDuration(), analytics.getTotalCompletions());
         Double completionsPercent = avg(analytics.getTotalCompletions(), analytics.getTotalStarts());
         Double cancellationPercent = avg(analytics.getTotalCancellations(), analytics.getTotalStarts());
@@ -80,15 +79,17 @@ public class AnalyticsService {
         log.info("Analysis is finished");
     }
 
-    public Set<String> aggregatePassages() {
-        List<PassageDocument> updatedPassages = new ArrayList<>();
-        Set<String> affectedRouteIds = new HashSet<>();
+    public void aggregatePassages() {
+        final int BATCH_SIZE = 100;
+        List<PassageDocument> batchToUpdate = new ArrayList<>(BATCH_SIZE);
+
+//        List<PassageDocument> updatedPassages = new ArrayList<>();
 
         List<PassageDocument> passagesToAnalyze = passageRepository
                 .findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED).toList();
         if (passagesToAnalyze.isEmpty()) {
             log.info("No new passages to analyze.");
-            return Collections.emptySet();
+            return;
         }
 
         Set<String> routeIds = passagesToAnalyze.stream()
@@ -114,22 +115,30 @@ public class AnalyticsService {
                 atomicUpdateService.aggregatePassageAnalytics(passage);
 
                 passage.setAnalyzed(true);
-                updatedPassages.add(passage);
-                affectedRouteIds.add(passage.getRouteId());
+//                updatedPassages.add(passage);
+                batchToUpdate.add(passage);
+                if (batchToUpdate.size() >= BATCH_SIZE) {
+                    passageRepository.saveAll(batchToUpdate);
+                    log.info("Saved a batch of {} analyzed passages.", batchToUpdate.size());
+                    batchToUpdate.clear();
+                }
                 log.info("Successfully analyzed passage with id: {}", passage.getPassageId());
 
             } catch (ObjectNotFoundException e) {
                 log.error("Failed to analyze passage {}: {}. Marking as analyzed to avoid retries.", passage.getPassageId(), e.getMessage());
                 passage.setAnalyzed(true);
-                updatedPassages.add(passage);
+//                updatedPassages.add(passage);
+                batchToUpdate.add(passage);
             } catch (Exception e) {
                 log.error("An unexpected error occurred while analyzing passage {}:", passage.getPassageId(), e);
             }
         }
-        if (!updatedPassages.isEmpty()) {
-            passageRepository.saveAll(updatedPassages);
+//        if (!updatedPassages.isEmpty()) {
+//            passageRepository.saveAll(updatedPassages);
+//        }
+        if (!batchToUpdate.isEmpty()) {
+            passageRepository.saveAll(batchToUpdate);
         }
-        return affectedRouteIds;
     }
 
     public PassageAnalytics integrityCheck(PassageDocument passage, RouteDocument route) {
@@ -147,7 +156,7 @@ public class AnalyticsService {
         routeFreq.forEach((point, requiredCount) -> {
             long visitedCount = passageFreq.getOrDefault(point, 0L);
             if (visitedCount < requiredCount) {
-                missedPoints.add(point);
+                for (int i = 0; i < (requiredCount - visitedCount); i++) missedPoints.add(point);
             }
         });
 
@@ -155,7 +164,7 @@ public class AnalyticsService {
         passageFreq.forEach((point, visitedCount) -> {
             long requiredCount = routeFreq.getOrDefault(point, 0L);
             if (requiredCount < visitedCount) {
-                extraPoints.add(point);
+                for (int i = 0; i < (visitedCount - requiredCount); i++) extraPoints.add(point);
             }
         });
 
@@ -172,35 +181,6 @@ public class AnalyticsService {
         double order = routePointIds.isEmpty() ? 0.0 : (double) lcsSequence.size() / routePointIds.size();
 
         return new PassageAnalytics(coverage, order, missedPoints, extraPoints, outOfOrderPoints);
-//        List<String> routePointIds = route.getPointsId();
-//        List<String> passagePointsIds = passage.getVisitedPoints().stream()
-//                .map(VisitedPoint::getPointId).toList();
-//
-//        Set<String> routeSet = new HashSet<>(routePointIds);
-//        Set<String> passageSet = new HashSet<>(passagePointsIds);
-//
-//        Set<String> missedPoints = new HashSet<>(routeSet);
-//        missedPoints.removeAll(passageSet);
-//
-//        Set<String> extraPoints = new HashSet<>(passageSet);
-//        extraPoints.removeAll(routeSet);
-//
-//
-//        List<String> lcsSequence = calculateLCS(routePointIds, passagePointsIds);
-//        Set<String> lcsSet = new HashSet<>(lcsSequence);
-//
-//        Set<String> common = new HashSet<>(routeSet);
-//        common.retainAll(passageSet);
-//
-//        Set<String> outOfOrderPoints = new HashSet<>(common);
-//        outOfOrderPoints.removeAll(lcsSet);
-//
-//
-//        // TODO подумать над расчетом coverage
-//        double coverage = (double) (routeSet.size() - missedPoints.size()) / routeSet.size();
-//        double order = (double) lcsSequence.size() / routePointIds.size();
-//
-//        return new PassageAnalytics(coverage, order, missedPoints.stream().toList(), extraPoints.stream().toList(), outOfOrderPoints.stream().toList());
     }
 
     private List<String> calculateLCS(List<String> routePointIds, List<String> passagePointIds) {

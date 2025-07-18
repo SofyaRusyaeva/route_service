@@ -38,7 +38,8 @@ public class SecurityConfig {
 
 
                 http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        http.oauth2Login(Customizer.withDefaults())
+//        http.oauth2Login(Customizer.withDefaults())
+        http
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/auth"));
         http.authorizeHttpRequests(
                 c -> c

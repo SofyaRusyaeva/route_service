@@ -16,8 +16,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.util.HashMap;
 import java.util.List;
 
-// TODO написать mapper
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

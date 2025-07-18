@@ -19,7 +19,7 @@ public interface RouteMapper {
     @Mapping(source = "routeDocument.routeId", target = "routeId")
     @Mapping(source = "routeDocument.userId", target = "userId")
 //    @Mapping(source = "routeDocument.isPublic", target = "isPublic")
-    @Mapping(target = "isPublic", expression = "java(routeDocument.isPublic())")
+//    @Mapping(target = "isPublic", expression = "java(routeDocument.isPublic())")
     @Mapping(source = "routeDocument.description", target = "description")
     @Mapping(source = "points", target = "points")
     RouteResponse toResponse(RouteDocument routeDocument, List<PointResponse> points);

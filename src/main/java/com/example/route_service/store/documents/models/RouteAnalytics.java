@@ -20,13 +20,13 @@ public class RouteAnalytics {
     long totalCancellations = 0;
 
     Double totalRating = 0.0;
-    Long ratingsCount;
+    long ratingsCount = 0;
 
-    Long totalDuration;
+    long totalDuration = 0;
 
     Double totalCoverage = 0.0;
     Double totalOrder = 0.0;
-    Long passagesAnalyzedCount = 0L;
+//    Long passagesAnalyzedCount = 0L;
 
 //    Double avgRating;
 //    Double avgDuration;

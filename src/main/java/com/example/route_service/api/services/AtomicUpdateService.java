@@ -7,6 +7,7 @@ import com.example.route_service.store.documents.models.VisitedPoint;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -18,6 +19,7 @@ import java.time.Duration;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class AtomicUpdateService {
 
     MongoTemplate mongoTemplate;
@@ -36,38 +38,37 @@ public class AtomicUpdateService {
         if (passage.getRouteId() == null || passage.getPassageAnalytics() == null) {
             return;
         }
-
+        log.info("Updating analytics for route {}. Passage analytics: {}", passage.getRouteId(), passage.getPassageAnalytics());
         Update update = new Update();
-        update.inc("routeAnalytics.totalCompletions", 1);
-        update.inc("routeAnalytics.passagesAnalyzedCount", 1);
+        update.inc("route_analytics.totalCompletions", 1);
+//        update.inc("routeAnalytics.passagesAnalyzedCount", 1);
 
         if (passage.getFeedback() != null && passage.getFeedback().getRating() != null) {
-            update.inc("routeAnalytics.totalRating", passage.getFeedback().getRating());
-            update.inc("routeAnalytics.ratingsCount", 1);
+            update.inc("route_analytics.totalRating", passage.getFeedback().getRating());
+            update.inc("route_analytics.ratingsCount", 1);
         }
 
         if (passage.getStartTime() != null && passage.getEndTime() != null) {
-            update.inc("routeAnalytics.totalDuration",
+            update.inc("route_analytics.totalDuration",
                     Duration.between(passage.getStartTime(), passage.getEndTime()).toSeconds());
         }
 
         PassageAnalytics passageAnalytics = passage.getPassageAnalytics();
-        update.inc("routeAnalytics.totalCoverage", passageAnalytics.getCoverage());
-        update.inc("routeAnalytics.totalOrder", passageAnalytics.getOrder());
+        update.inc("route_analytics.totalCoverage", passageAnalytics.getCoverage());
+        update.inc("route_analytics.totalOrder", passageAnalytics.getOrder());
 
         passageAnalytics.getMissedPoints().forEach(pointId ->
-                update.inc("routeAnalytics.missedPointsFrequency." + pointId, 1L));
+                update.inc("route_analytics.missedPointsFrequency." + pointId, 1L));
         passageAnalytics.getExtraPoints().forEach(pointId ->
-                update.inc("routeAnalytics.extraPointsFrequency." + pointId, 1L));
+                update.inc("route_analytics.extraPointsFrequency." + pointId, 1L));
         passageAnalytics.getOutOfOrderPoints().forEach(pointId ->
-                update.inc("routeAnalytics.outOfOrderPointsFrequency." + pointId, 1L));
-
+                update.inc("route_analytics.outOfOrderPointsFrequency." + pointId, 1L));
 
         for (VisitedPoint point : passage.getVisitedPoints()) {
             if (point.getPointId() != null && point.getEntryTime() != null && point.getExitTime() != null) {
                 long durationOnPoint = Duration.between(point.getEntryTime(), point.getExitTime()).toSeconds();
-                update.inc("routeAnalytics.totalPointDurations." + point.getPointId(), durationOnPoint);
-                update.inc("routeAnalytics.pointVisitCount." + point.getPointId(), 1L);
+                update.inc("route_analytics.totalPointDurations." + point.getPointId(), durationOnPoint);
+                update.inc("route_analytics.pointVisitCount." + point.getPointId(), 1L);
             }
         }
 
