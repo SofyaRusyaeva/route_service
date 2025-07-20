@@ -1,7 +1,6 @@
 package com.example.route_service.api.dto;
 
 import com.example.route_service.store.documents.models.LocationData;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,23 +8,40 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
+/**
+ * DTO для представления информации о точке на карте в ответе API.
+ *
+ * @see com.example.route_service.store.documents.PointDocument
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PointResponse {
 
-    @Schema(description = "id точки")
+    /**
+     * Уникальный идентификатор точки
+     */
     String pointId;
 
-    @Schema(description = "Тип точки, определяющий ее категорию", example = "Парк")
+    /**
+     * Тип точки
+     */
     String type;
 
+    /**
+     * Географические координаты точки в формате GeoJson
+     */
     GeoJsonPoint location;
 
-    @Schema(description = "Полный строковый адрес точки", example = "парк культуры и отдыха имени Юрия Гагарина, Промышленный район, городской округ Самара")
+    /**
+     * Адрес точки
+     */
     String address;
 
-    @Schema(description = "Дополнительные данные о местоположении")
+    /**
+     * Вложенный объект с дополнительными сведениями о точке (название, комментарий)
+     * @see LocationData
+     */
     LocationData locationData;
 }

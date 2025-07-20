@@ -1,6 +1,5 @@
 package com.example.route_service.api.services;
 
-
 import com.example.route_service.api.dto.PointResponse;
 import com.example.route_service.api.dto.RouteRequest;
 import com.example.route_service.api.dto.RouteResponse;
@@ -21,6 +20,10 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Сервис описывающий логику для работы с маршрутами
+ * Отвечает за создание, чтение, обновление, удаление и изменение видимости маршрутов
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -31,13 +34,22 @@ public class RouteService {
     PointMapper pointMapper;
     RouteMapper routeMapper;
 
-
+    /**
+     * Получает список всех маршрутов, созданных текущим аутентифицированным пользователем
+     *
+     * @return Список Объект {@link RouteResponse} с информацией о маршрутах пользователя
+     */
     public List<RouteResponse> getMyRoutes() {
         String userId = authService.getCurrentUserId();
         List<RouteDocument> routes = routeRepository.findByUserId(userId);
         return buildRouteResponse(routes);
     }
 
+    /**
+     * Получает список всех публичных маршрутов, созданных указанным пользователем
+     * @param userId Уникальный идентификатор пользователя, чьи маршруты нужно найти
+     * @return Список Объект {@link  RouteResponse} с информацией о публичных маршрутах пользователя
+     */
     public List<RouteResponse> getUserRoutes(String userId) {
         List<RouteDocument> routes = routeRepository.findAllByUserIdAndIsPublicTrue(userId);
 //        return routes.stream()
@@ -46,6 +58,12 @@ public class RouteService {
         return buildRouteResponse(routes);
     }
 
+    /**
+     * Создает новый маршрут для текущего пользователя
+     * @param request Объект {@link RouteRequest} с данными для создания маршрута
+     * @return Объект {@link RouteResponse} с информацией о созданном маршруте
+     * @throws InvalidObjectIdException если одна или несколько точек из запроса не существуют в базе данных
+     */
     public RouteResponse addRoute(RouteRequest request) {
         String userId = authService.getCurrentUserId();
         List<PointDocument> points = validateAndGetPoints(request.getPointsId());
@@ -69,12 +87,21 @@ public class RouteService {
 //        return buildRouteResponse(routeRepository.save(routeDocument));
     }
 
+    /**
+     * Обновляет существующий маршрут (состав точек, флаг публичности и описание)
+     * Проверяет, что маршрут принадлежит текущему пользователю
+     * @param routeId Уникальный идентификатор обновляемого маршрута
+     * @param newRoute Объект {@link RouteRequest} с новыми данными для маршрута
+     * @return Объект {@link RouteResponse}
+     * @throws ObjectNotFoundException если маршрут с указанным id не найден у текущего пользователя
+     * @throws InvalidObjectIdException если одна или несколько точек из запроса не существуют в базе данных
+     */
     public RouteResponse updateRoute(String routeId, RouteRequest newRoute) {
         String userId = authService.getCurrentUserId();
 
         List<PointDocument> points = validateAndGetPoints(newRoute.getPointsId());
 
-        RouteDocument route = routeRepository.findById(routeId)
+        RouteDocument route = routeRepository.findByUserIdAndRouteId(userId, routeId)
                 .orElseThrow(() -> new ObjectNotFoundException(String.format("Route %s not found", routeId)));
 
         route.setPointsId(newRoute.getPointsId());
@@ -100,6 +127,12 @@ public class RouteService {
 //        return buildRouteResponse(routeRepository.save(route));
     }
 
+    /**
+     * Удаляет маршрут
+     * Операция доступна только владельцу маршрута
+     * @param routeId Уникальный идентификатор удаляемого маршрута
+     * @throws ObjectNotFoundException если маршрут с указанным id не найден у текущего пользователя
+     */
     public void deleteRoute(String routeId) {
         String userId = authService.getCurrentUserId();
 
@@ -117,6 +150,12 @@ public class RouteService {
 //        routeRepository.delete(route);
     }
 
+    /**
+     * Изменяет флаг публичности маршрута на противоположный
+     * @param routeId Уникальный идентификатор маршрута.
+     * @return Объект {@link RouteResponse} с обновленной информацией о маршруте
+     * @throws ObjectNotFoundException если маршрут с указанным id не найден у текущего пользователя
+     */
     public RouteResponse changeVisibility(String routeId) {
         String userId = authService.getCurrentUserId();
         RouteDocument route = routeRepository.findByUserIdAndRouteId(userId, routeId)
@@ -144,7 +183,12 @@ public class RouteService {
 //        }
 //    }
 
-
+    /**
+     * Приватный метод для проверки существования точек и их получения из БД
+     * @param pointIds Список идентификаторов точек для проверки
+     * @return Список {@link PointDocument} в исходном порядке
+     * @throws InvalidObjectIdException если хотя бы одна из точек не найдена в базе данных
+     */
     private List<PointDocument> validateAndGetPoints(List<String> pointIds) {
         if (pointIds.isEmpty()) {
             return Collections.emptyList();
@@ -164,6 +208,14 @@ public class RouteService {
     }
 
 
+    /**
+     * Приватный метод для сборки списка {@link RouteResponse}
+     * Чтобы избежать проблемы N+1 запросов, метод сначала собирает все уникальные
+     * идентификаторы точек из всех маршрутов, делает один запрос в БД для получения
+     * всех точек, а затем распределяет их по соответствующим маршрутам
+     * @param routes Список документов {@link RouteDocument}
+     * @return Список объектов {@link RouteResponse} с заполненными данными о точках
+     */
     private List<RouteResponse> buildRouteResponse(List<RouteDocument> routes) {
         if (routes.isEmpty()) {
             return Collections.emptyList();

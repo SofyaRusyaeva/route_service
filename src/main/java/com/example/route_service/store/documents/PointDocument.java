@@ -13,6 +13,10 @@ import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+/**
+ * Документ точки на карте, хранимый в коллекции "point"
+ * Точка является частью маршрута
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,19 +24,36 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @Document(collection = "point")
 public class PointDocument {
 
+    /**
+     * Уникальный идентификатор точки
+     */
     @Id
     String pointId;
 
+    /**
+     * Тип точки
+     */
     @Field("type")
     @NotBlank(message = "Point type cannot be null")
     String type;
 
+    /**
+     * Географические координаты точки в формате GeoJson
+     */
     @Field("location")
     GeoJsonPoint location;
 
+    /**
+     * Адрес точки
+     */
     @Field("address")
     String address;
 
+    /**
+     * Вложенный объект с дополнительными сведениями о точке (название, комментарий)
+     *
+     * @see LocationData
+     */
     @Valid
     @Field("location_data")
     LocationData locationData;

@@ -14,6 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
+/**
+ * Сервис описывающий логику для работы с точками
+ * Предоставляет методы для создания, чтения, обновления и удаления точек
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -22,13 +26,26 @@ public class PointService {
     RouteRepository routeRepository;
     PointMapper pointMapper;
 
-
+    /**
+     * Получает информацию о точке по её id
+     *
+     * @param pointId Уникальный идентификатор искомой точки
+     * @return Объект {@link PointResponse} с данными о точке
+     * @throws ObjectNotFoundException если точка с указанным id не найдена
+     */
     public PointResponse getPointById(String pointId) {
         PointDocument point = pointRepository.findById(pointId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Point with id %s not found", pointId)));
         return pointMapper.toResponse(point);
     }
 
+    /**
+     * Обновляет данные существующей точки
+     * @param pointId  Уникальный идентификатор обновляемой точки
+     * @param newPoint Объект {@link PointRequest} с новыми данными для точки
+     * @return Объект {@link PointResponse} с обновленными данными точки
+     * @throws ObjectNotFoundException если точка с указанным id не найдена
+     */
     public PointResponse updatePoint(String pointId, @Valid PointRequest newPoint) {
         PointDocument existingPoint = pointRepository.findById(pointId)
                 .orElseThrow(() -> new ObjectNotFoundException(String.format("Point with id %s not found", pointId)));
@@ -42,19 +59,24 @@ public class PointService {
         return pointMapper.toResponse(updatedPoint);
     }
 
+    /**
+     * Создает новую точку на основе переданных данных
+     * @param point Объект {@link PointRequest} с данными для создания новой точки
+     * @return Объект {@link PointResponse} с данными созданной точки
+     */
     public PointResponse addPoint(@Valid PointRequest point) {
         PointDocument pointDocument = pointRepository.save(pointMapper.toDocument(point));
         return pointMapper.toResponse(pointDocument);
-//        try {
-//            return pointRepository.save(pointMapper.toDocument(point));
-//        } catch (Exception e) {
-//            throw new ObjectSaveException("Error adding point");
-//        }
     }
 
+    /**
+     * Удаляет точку по её идентификатору
+     * Перед удалением выполняется проверка, что точка не используется ни в одном из существующих маршрутов
+     * @param pointId Уникальный идентификатор удаляемой точки
+     * @throws ObjectNotFoundException если точка с указанным id не найдена
+     * @throws StateException если точка используется хотя бы в одном маршруте и не может быть удалена
+     */
     public void deletePoint(String pointId) {
-
-
         if (!pointRepository.existsById(pointId)) {
             throw new ObjectNotFoundException(String.format("Point with id %s not found", pointId));
         }
@@ -64,5 +86,4 @@ public class PointService {
         }
         pointRepository.deleteById(pointId);
     }
-
 }

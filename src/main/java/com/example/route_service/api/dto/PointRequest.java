@@ -1,7 +1,6 @@
 package com.example.route_service.api.dto;
 
 import com.example.route_service.store.documents.models.LocationData;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,24 +10,37 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
+/**
+ * DTO для создания новой точки
+ *
+ * @see com.example.route_service.store.documents.PointDocument
+ */
 @Data
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Schema(description = "Точка на карте")
 public class PointRequest {
 
-    @Schema(description = "Тип точки, определяющий ее категорию", example = "Парк")
+    /**
+     * Тип точки
+     */
     @NotBlank(message = "Type cannot be null")
     String type;
 
-    @Schema(description = "Гео-координаты точки")
+    /**
+     * Географические координаты точки в формате GeoJson
+     */
     @NotNull(message = "Location cannot be null")
     GeoJsonPoint location;
 
-    @Schema(description = "Полный строковый адрес точки", example = "парк культуры и отдыха имени Юрия Гагарина, Промышленный район, городской округ Самара")
+    /**
+     * Адрес точки
+     */
     String address;
 
-    @Schema(description = "Дополнительные данные о местоположении")
+    /**
+     * Вложенный объект с дополнительными сведениями о точке (название, комментарий)
+     * @see LocationData
+     */
     @Valid
     LocationData locationData;
 }

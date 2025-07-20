@@ -22,6 +22,13 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Сервис, отвечающий за обработку аналитических данных по маршрутам
+ * Выполняет расчет и предоставление аналитики по запросу
+ * Производит периодическую фоновую обработку сырых данных
+ * Выполняет анализ целостности прохождения маршрута (соответствие порядка посещенных точек,
+ * пропущенные и лишние точки)
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -32,6 +39,15 @@ public class AnalyticsService {
     PassageRepository passageRepository;
     AtomicUpdateService atomicUpdateService;
 
+    /**
+     * Формирует DTO с рассчитанной аналитикой для конкретного маршрута
+     * Извлекает агрегированные данные из {@link RouteAnalytics}
+     * и вычисляет на их основе средние значения и проценты
+     *
+     * @param routeId Уникальный идентификатор маршрута
+     * @return Объект {@link RouteAnalyticsDto} с готовыми метриками или `null`, если аналитика для маршрута отсутствует
+     * @throws ObjectNotFoundException если маршрут с указанным id не найден
+     */
     public RouteAnalyticsDto getAnalytics(String routeId) {
         RouteDocument route = routeRepository.findById(routeId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Route %s not found", routeId))
@@ -69,6 +85,12 @@ public class AnalyticsService {
         );
     }
 
+    /**
+     * Метод, запускаемый по расписанию для выполнения полного цикла анализа
+     * Метод выполняется автоматически согласно выражению, указанному в `analytics.cron.expression`.
+     * Делегирует основную работу методу {@link #aggregatePassages} и логирует
+     * начало и конец процесса обработки
+     */
     @Scheduled(cron = "${analytics.cron.expression}")
     @Transactional
     public void fullAnalysis() {
@@ -79,11 +101,16 @@ public class AnalyticsService {
         log.info("Analysis is finished");
     }
 
+    /**
+     * Выполняет основную логику фоновой обработки: находит все завершенные, но еще
+     * не проанализированные прохождения, вычисляет для каждого из них аналитику,
+     * атомарно обновляет общие данные по маршруту и помечает прохождение как обработанное.
+     * В случае ошибки при анализе прохождения,
+     * оно помечается как обработанное во избежание повторных сбоев
+     */
     public void aggregatePassages() {
         final int BATCH_SIZE = 100;
         List<PassageDocument> batchToUpdate = new ArrayList<>(BATCH_SIZE);
-
-//        List<PassageDocument> updatedPassages = new ArrayList<>();
 
         List<PassageDocument> passagesToAnalyze = passageRepository
                 .findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED).toList();
@@ -115,7 +142,6 @@ public class AnalyticsService {
                 atomicUpdateService.aggregatePassageAnalytics(passage);
 
                 passage.setAnalyzed(true);
-//                updatedPassages.add(passage);
                 batchToUpdate.add(passage);
                 if (batchToUpdate.size() >= BATCH_SIZE) {
                     passageRepository.saveAll(batchToUpdate);
@@ -127,20 +153,26 @@ public class AnalyticsService {
             } catch (ObjectNotFoundException e) {
                 log.error("Failed to analyze passage {}: {}. Marking as analyzed to avoid retries.", passage.getPassageId(), e.getMessage());
                 passage.setAnalyzed(true);
-//                updatedPassages.add(passage);
                 batchToUpdate.add(passage);
             } catch (Exception e) {
                 log.error("An unexpected error occurred while analyzing passage {}:", passage.getPassageId(), e);
             }
         }
-//        if (!updatedPassages.isEmpty()) {
-//            passageRepository.saveAll(updatedPassages);
-//        }
+
         if (!batchToUpdate.isEmpty()) {
             passageRepository.saveAll(batchToUpdate);
         }
     }
 
+    /**
+     * Вычисляет метрики для одного конкретного прохождения,
+     * сравнивая фактический путь с эталонным маршрутом
+     * Рассчитывает покрытие, находит пропущенные и лишние точки,
+     * а также точки, посещенные не в том порядке
+     * @param passage Объект {@link PassageDocument} для анализа
+     * @param route Соответствующий {@link RouteDocument}, содержащий эталонный список точек
+     * @return Объект {@link PassageAnalytics} с рассчитанными метриками
+     */
     public PassageAnalytics integrityCheck(PassageDocument passage, RouteDocument route) {
 
         List<String> routePointIds = route.getPointsId();
@@ -183,6 +215,14 @@ public class AnalyticsService {
         return new PassageAnalytics(coverage, order, missedPoints, extraPoints, outOfOrderPoints);
     }
 
+    /**
+     * Алгоритм поиска наибольшей общей подпоследовательности (LCS)
+     * Используется для определения, какая часть
+     * точек маршрута была пройдена в правильной последовательности
+     * @param routePointIds Эталонный список id точек
+     * @param passagePointIds Фактический список id посещенных точек
+     * @return Список id точек, представляющий собой LCS
+     */
     private List<String> calculateLCS(List<String> routePointIds, List<String> passagePointIds) {
         int m = routePointIds.size();
         int n = passagePointIds.size();
@@ -219,6 +259,12 @@ public class AnalyticsService {
         return lcsSequence;
     }
 
+    /**
+     * Вспомогательный метод для расчета средней продолжительности нахождения на точках
+     * @param totalPointDurations Карта с суммарной длительностью на каждой точке
+     * @param pointVisitCount Карта с количеством посещений каждой точки
+     * @return Карта со средними значениями
+     */
     private Map<String, Double> avgPointDurations(Map<String, Long> totalPointDurations, Map<String, Long> pointVisitCount) {
         if (pointVisitCount == null || pointVisitCount.isEmpty()) {
             return Collections.emptyMap();
@@ -233,6 +279,13 @@ public class AnalyticsService {
         return resultMap;
     }
 
+    /**
+     * Вспомогательный метод для расчета средних значений
+     * Возвращает `null`, если делитель равен `null` или нулю
+     * @param total Общее значение
+     * @param count Количество
+     * @return Среднее значение или `null`.
+     */
     private Double avg(Number total, Long count) {
         if (total == null || count == null || count == 0) {
             return null;

@@ -79,7 +79,7 @@ public class AnalyticsServiceIntegrationTest {
         passage1.setStartTime(Instant.now());
         passage1.setEndTime(Instant.now().plusSeconds(2000));
         passage1.setFeedback(new Feedback(5, ""));
-        passage1.setVisitedPoints(List.of(new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000), null, null)));
+        passage1.setVisitedPoints(List.of(new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000))));
 
         PassageDocument passage2 = new PassageDocument();
         passage2.setPassageId("pass2");
@@ -89,9 +89,9 @@ public class AnalyticsServiceIntegrationTest {
         passage2.setStatus(PassageStatus.COMPLETED);
         passage2.setFeedback(new Feedback(1, ""));
         passage2.setVisitedPoints(List.of(
-                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000), null, null),
-                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000), null, null),
-                new VisitedPoint("p3", Instant.now(), Instant.now().plusSeconds(1000), null, null)
+                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000)),
+                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000)),
+                new VisitedPoint("p3", Instant.now(), Instant.now().plusSeconds(1000))
         ));
 
         PassageDocument passage3 = new PassageDocument();
@@ -107,8 +107,8 @@ public class AnalyticsServiceIntegrationTest {
         passage4.setAnalyzed(true);
         passage4.setFeedback(new Feedback(1, ""));
         passage4.setVisitedPoints(List.of(
-                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000), null, null),
-                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000), null, null)
+                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000)),
+                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000))
         ));
 
         PassageDocument passage5 = new PassageDocument();
@@ -119,8 +119,8 @@ public class AnalyticsServiceIntegrationTest {
         passage5.setStartTime(Instant.now());
         passage5.setEndTime(Instant.now().plusSeconds(4000));
         passage5.setVisitedPoints(List.of(
-                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000), null, null),
-                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000), null, null)
+                new VisitedPoint("p2", Instant.now(), Instant.now().plusSeconds(1000)),
+                new VisitedPoint("p1", Instant.now(), Instant.now().plusSeconds(1000))
         ));
         passageRepository.saveAll(List.of(passage1, passage2, passage3, passage4, passage5));
 

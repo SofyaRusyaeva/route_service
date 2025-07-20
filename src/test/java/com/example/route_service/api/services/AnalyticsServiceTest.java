@@ -165,7 +165,7 @@ class AnalyticsServiceTest {
     void integrityCheck_shouldCalculateCorrectly() {
         RouteDocument route = new RouteDocument(null, null, List.of("A", "B", "B"), false, null, null);
         PassageDocument passage = new PassageDocument();
-        passage.setVisitedPoints(List.of(new VisitedPoint("A", null, null, null, null)));
+        passage.setVisitedPoints(List.of(new VisitedPoint("A", null, null)));
 
         PassageAnalytics result = analyticsService.integrityCheck(passage, route);
 

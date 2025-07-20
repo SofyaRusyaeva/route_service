@@ -1,6 +1,5 @@
 package com.example.route_service.api.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,24 +9,40 @@ import lombok.experimental.FieldDefaults;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * DTO для представления полной информации о маршруте
+ *
+ * @see com.example.route_service.store.documents.RouteDocument
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RouteResponse {
 
-    @Schema(description = "id маршрута")
+    /**
+     * Уникальный идентификатор маршрута
+     */
     String routeId;
 
-    @Schema(description = "id пользователя-владельца")
+    /**
+     * Идентификатор пользователя, создавшего маршрут
+     */
     String userId;
 
-    @Schema(description = "Список точек маршрута")
+    /**
+     * Список идентификаторов точек (PointDocument), составляющих маршрут
+     */
     List<PointResponse> points;
 
-    @Schema(description = "Флаг публичности маршрута")
+    /**
+     * Флаг публичности маршрута, указывающий, является ли маршрут
+     * публичным и доступным для всех пользователей
+     */
     boolean isPublic;
 
-    @Schema(description = "Дополнительные сведения")
+    /**
+     * Дополнительные сведения о маршруте (название, описание, рейтинг и т.д.)
+     */
     HashMap<String, String> description;
 }

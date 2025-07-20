@@ -17,6 +17,7 @@ public interface RouteRepository extends MongoRepository<RouteDocument, String> 
 
     long deleteByRouteIdAndUserId(String routeId, String userId);
 
+
     boolean existsByPointsIdContains(String pointId);
 
 }

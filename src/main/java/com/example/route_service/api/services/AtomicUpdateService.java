@@ -16,6 +16,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
+/**
+ * Сервис, предназначенный для выполнения атомарных операций обновления документов в MongoDB
+ * Основная задача сервиса — обновление счетчиков и суммарных показателей в документе {@link RouteDocument} на основе
+ * событий, происходящих в {@link PassageDocument}.
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -24,16 +29,32 @@ public class AtomicUpdateService {
 
     MongoTemplate mongoTemplate;
 
+    /**
+     * Атомарно увеличивает счетчик общего количества стартов для указанного маршрута
+     *
+     * @param routeId Уникальный идентификатор маршрута, для которого увеличивается счетчик
+     */
     public void incStarts(String routeId) {
-        Update update = new Update().inc("routeAnalytics.totalStarts", 1);
+        Update update = new Update().inc("route_analytics.totalStarts", 1);
         executeUpdate(routeId, update);
     }
 
+    /**
+     * Атомарно увеличивает счетчик общего количества отмен прохождений для указанного маршрута
+     * @param routeId Уникальный идентификатор маршрута, для которого увеличивается счетчик
+     */
     public void incCancellations(String routeId) {
-        Update update = new Update().inc("routeAnalytics.totalCancellations", 1);
+        Update update = new Update().inc("route_analytics.totalCancellations", 1);
         executeUpdate(routeId, update);
     }
 
+    /**
+     * Агрегирует данные из одного завершенного прохождения в общую аналитику маршрута
+     * Атомарно обновляет поля в документе {@link RouteDocument} (счетчики завершений,
+     * общие суммы рейтинга, продолжительности, покрытия, частотные карты для пропущенных,
+     * лишних и посещенных не по порядку точек)
+     * @param passage Объект {@link PassageDocument}, который был завершен и проанализирован
+     */
     public void aggregatePassageAnalytics(PassageDocument passage) {
         if (passage.getRouteId() == null || passage.getPassageAnalytics() == null) {
             return;
@@ -41,7 +62,7 @@ public class AtomicUpdateService {
         log.info("Updating analytics for route {}. Passage analytics: {}", passage.getRouteId(), passage.getPassageAnalytics());
         Update update = new Update();
         update.inc("route_analytics.totalCompletions", 1);
-//        update.inc("routeAnalytics.passagesAnalyzedCount", 1);
+//        update.inc("route_analytics.passagesAnalyzedCount", 1);
 
         if (passage.getFeedback() != null && passage.getFeedback().getRating() != null) {
             update.inc("route_analytics.totalRating", passage.getFeedback().getRating());
@@ -75,6 +96,13 @@ public class AtomicUpdateService {
         executeUpdate(passage.getRouteId(), update);
     }
 
+    /**
+     * Приватный метод, выполняющий операцию обновления в MongoDB
+     * Создает запрос для поиска документа по `routeId` и применяет к нему
+     * переданный объект {@link Update}
+     * @param routeId Идентификатор документа {@link RouteDocument} для обновления
+     * @param update  Объект {@link Update}, содержащий операции для выполнения (inc)
+     */
     private void executeUpdate(String routeId, Update update) {
         Query query = new Query(Criteria.where("routeId").is(routeId));
         mongoTemplate.updateFirst(query, update, RouteDocument.class);

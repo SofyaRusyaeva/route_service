@@ -93,9 +93,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(StateException.class)
     public ResponseEntity<?> handleStateException(StateException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 Map.of(
-                        "status", HttpStatus.BAD_REQUEST.value(),
+                        "status", HttpStatus.CONFLICT.value(),
                         "message", e.getMessage()
                 )
         );

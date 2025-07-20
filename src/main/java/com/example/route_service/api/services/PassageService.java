@@ -6,23 +6,22 @@ import com.example.route_service.api.exeptions.ObjectNotFoundException;
 import com.example.route_service.api.exeptions.StateException;
 import com.example.route_service.api.mappers.PassageMapper;
 import com.example.route_service.store.documents.PassageDocument;
-import com.example.route_service.store.documents.RouteDocument;
 import com.example.route_service.store.enums.PassageStatus;
 import com.example.route_service.store.repositories.PassageRepository;
 import com.example.route_service.store.repositories.RouteRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
+/**
+ * Сервис для управления жизненным циклом прохождения маршрутов
+ * Отвечает за начало, завершение и отмену прохождений
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -32,16 +31,21 @@ public class PassageService {
     RouteRepository routeRepository;
     AuthService authService;
     PassageMapper passageMapper;
-    MongoTemplate mongoTemplate;
     AtomicUpdateService atomicUpdateService;
 
+    /**
+     * Инициирует новое прохождение маршрута для текущего пользователя
+     * Создает документ прохождения со статусом IN_PROGRESS и атомарно
+     * увеличивает счетчик общего количества стартов для данного маршрута
+     *
+     * @param routeId Уникальный идентификатор маршрута, который пользователь начинает проходить
+     * @return Объект {@link PassageResponse}, представляющий новое прохождение
+     * @throws ObjectNotFoundException если маршрут с указанным id не существует
+     */
     @Transactional
     public PassageResponse startPassage(String routeId) {
-
         String userId = authService.getCurrentUserId();
 
-//        RouteDocument route = routeRepository.findById(routeId)
-//                .orElseThrow(() -> new ObjectNotFoundException(String.format("Route %s not found", routeId)));
         if (!routeRepository.existsById(routeId)) {
             throw new ObjectNotFoundException(String.format("Route %s not found", routeId));
         }
@@ -52,41 +56,61 @@ public class PassageService {
         passage.setStatus(PassageStatus.IN_PROGRESS);
         passage.setStartTime(Instant.now());
 
-//        route.getRouteAnalytics().setTotalStarts(route.getRouteAnalytics().getTotalStarts() + 1);
-//        routeRepository.save(route);
         atomicUpdateService.incStarts(routeId);
         return passageMapper.toResponse(passageRepository.save(passage));
     }
 
+    /**
+     * Завершает прохождение маршрута, устанавливая статус COMPLETED (только для прохождений со статусом IN_PROGRESS)
+     * @param passageId Уникальный идентификатор завершаемого прохождения
+     * @param request   Объект {@link PassageFeedbackRequest} с отзывом пользователя (может быть пустым)
+     * @return Объект {@link PassageResponse} с обновленными данными прохождения
+     * @throws ObjectNotFoundException если прохождение не найдено
+     * @throws StateException если прохождение уже было завершено или отменено.
+     * @throws AccessDeniedException если текущий пользователь не является владельцем прохождения
+     */
     @Transactional
     public PassageResponse finishPassage(String passageId, PassageFeedbackRequest request) {
-        return updatePassageStatus(passageId, request, PassageStatus.COMPLETED);
-    }
-
-    @Transactional
-    public PassageResponse cancelPassage(String passageId, PassageFeedbackRequest request) {
-        PassageResponse response = updatePassageStatus(passageId, request, PassageStatus.CANCELLED);
-
-        atomicUpdateService.incCancellations(response.getRouteId());
-//        RouteDocument route = routeRepository.findById(response.getRouteId()).orElseThrow(() ->
-//                new ObjectNotFoundException(String.format("Route %s not found", (response.getRouteId()))));
-//        route.getRouteAnalytics().setTotalCancellations(route.getRouteAnalytics().getTotalCancellations() + 1);
-//        routeRepository.save(route);
-
-        return response;
-    }
-
-    private PassageResponse updatePassageStatus(String passageId, PassageFeedbackRequest request, PassageStatus status) {
         String userId = authService.getCurrentUserId();
         PassageDocument passage = findAndValidateRoute(userId, passageId);
 
         passage.setEndTime(Instant.now());
         passage.setFeedback(passageMapper.toFeedback(request));
-        passage.setStatus(status);
-
+        passage.setStatus(PassageStatus.COMPLETED);
         return passageMapper.toResponse(passageRepository.save(passage));
     }
 
+    /**
+     * Отменяет прохождение маршрута, устанавливая статус CANCELLED (только для прохождений со статусом IN_PROGRESS)
+     *
+     * @param passageId Уникальный идентификатор отменяемого прохождения
+     * @return Объект {@link PassageResponse} с обновленными данными прохождения
+     * @throws ObjectNotFoundException если прохождение не найдено
+     * @throws StateException          если прохождение уже было завершено или отменено
+     * @throws AccessDeniedException   если текущий пользователь не является владельцем прохождения
+     */
+    @Transactional
+    public PassageResponse cancelPassage(String passageId) {
+        String userId = authService.getCurrentUserId();
+        PassageDocument passage = findAndValidateRoute(userId, passageId);
+
+        passage.setEndTime(Instant.now());
+        passage.setStatus(PassageStatus.CANCELLED);
+
+        PassageResponse response = passageMapper.toResponse(passageRepository.save(passage));
+        atomicUpdateService.incCancellations(response.getRouteId());
+        return response;
+    }
+
+    /**
+     * Приватный метод для поиска прохождения и выполнения проверок
+     * @param userId Идентификатор текущего пользователя для проверки прав доступа
+     * @param passageId Идентификатор искомого прохождения
+     * @return Документ {@link PassageDocument}, если все проверки пройдены
+     * @throws ObjectNotFoundException если прохождение не найдено
+     * @throws StateException если статус прохождения не IN_PROGRESS
+     * @throws AccessDeniedException если пользователь пытается изменить чужое прохождение
+     */
     private PassageDocument findAndValidateRoute(String userId, String passageId) {
         PassageDocument passage = passageRepository.findById(passageId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Passage %s not found", passageId))
@@ -99,11 +123,5 @@ public class PassageService {
             throw new AccessDeniedException("User can't modify this passage");
 
         return passage;
-    }
-
-    public void incrementRouteStarts(String routeId) {
-        Query query = new Query(Criteria.where("routeId").is(routeId));
-        Update update = new Update().inc("routeAnalytics.totalStarts", 1);
-        mongoTemplate.updateFirst(query, update, RouteDocument.class);
     }
 }

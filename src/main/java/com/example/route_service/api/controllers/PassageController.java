@@ -31,10 +31,9 @@ public class PassageController {
     }
 
     @PostMapping("/passage/{passageId}/cancel")
-    public ResponseEntity<PassageResponse> cancelPassage(@PathVariable String passageId,
-                                                         @Valid @RequestBody PassageFeedbackRequest request) {
+    public ResponseEntity<PassageResponse> cancelPassage(@PathVariable String passageId) {
 
-        return ResponseEntity.ok(passageService.cancelPassage(passageId, request));
+        return ResponseEntity.ok(passageService.cancelPassage(passageId));
     }
 
 }
