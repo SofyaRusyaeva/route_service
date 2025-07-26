@@ -6,6 +6,7 @@ import com.example.route_service.store.enums.PassageStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
@@ -17,6 +18,7 @@ import java.util.List;
  * @see com.example.route_service.store.documents.PassageDocument
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PassageResponse {

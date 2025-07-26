@@ -36,11 +36,12 @@ class AnalyticsServiceTest {
     PassageRepository passageRepository;
     @Mock
     AtomicUpdateService atomicUpdateService;
+
     @InjectMocks
     AnalyticsService analyticsService;
 
     @Test
-    void getAnalytics() {
+    void getAnalytics_whenRouteDataIsValid_shouldCalculateAndReturnDto() {
         RouteDocument route = new RouteDocument();
         route.setRouteId("route1");
 
@@ -73,9 +74,8 @@ class AnalyticsServiceTest {
         assertEquals(300.0, avgPointDurations.get("p2"));
     }
 
-
     @Test
-    void getAnalyticsWhenRouteNotFound() {
+    void getAnalytics_whenRouteNotFound_shouldThrowException() {
         String routeId = "route1";
         when(routeRepository.findById(routeId)).thenReturn(Optional.empty());
 
@@ -83,7 +83,21 @@ class AnalyticsServiceTest {
     }
 
     @Test
-    void getAnalyticsWhenAnalyticsIsNull() {
+    void getAnalytics_whenCountersAreZero_shouldReturnNullForAverages() {
+        RouteAnalytics rawAnalytics = new RouteAnalytics();
+        rawAnalytics.setTotalStarts(0L);
+        RouteDocument route = new RouteDocument();
+        route.setRouteAnalytics(rawAnalytics);
+        when(routeRepository.findById(anyString())).thenReturn(Optional.of(route));
+
+        RouteAnalyticsDto result = analyticsService.getAnalytics("route1");
+
+        assertNull(result.getCompletionsPercent());
+        assertNull(result.getAvgRating());
+    }
+
+    @Test
+    void getAnalytics_whenAnalyticsIsNull_shouldReturnNull() {
         String routeId = "route1";
         RouteDocument route = new RouteDocument();
         route.setRouteId(routeId);
@@ -95,13 +109,13 @@ class AnalyticsServiceTest {
     }
 
     @Test
-    void fullAnalysis() {
-        RouteDocument route = new RouteDocument("route1", "user1", List.of("p1"), false, null, null);
-        PassageDocument passage = new PassageDocument("passage1", "user1", "route1", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
+    void fullAnalysis_whenDataIsValid() {
+        RouteDocument route = new RouteDocument("r1", "u1", List.of("p1"), false, null, null);
+        PassageDocument passage = new PassageDocument("pass1", "u1", "r1", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
 
         when(passageRepository.findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED))
                 .thenReturn(Stream.of(passage));
-        when(routeRepository.findAllById(Set.of("route1"))).thenReturn(List.of(route));
+        when(routeRepository.findAllById(Set.of("r1"))).thenReturn(List.of(route));
 
         analyticsService.fullAnalysis();
 
@@ -117,7 +131,7 @@ class AnalyticsServiceTest {
     }
 
     @Test
-    void fullAnalysisWhenNoPassages() {
+    void fullAnalysis_whenNoPassages() {
         when(passageRepository.findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED))
                 .thenReturn(Stream.empty()); // Возвращаем пустой список
 
@@ -128,97 +142,41 @@ class AnalyticsServiceTest {
     }
 
     @Test
-    void fullAnalysisWhenRouteIsMissing() {
-        // Arrange
-        PassageDocument passageWithDeletedRoute = new PassageDocument("p1", "u1", "deleted-r1", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
-        PassageDocument normalPassage = new PassageDocument("p2", "u1", "r2", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
-        RouteDocument normalRoute = new RouteDocument("r2", null, List.of("A"), false, null, null);
+    void fullAnalysis_whenRouteIsMissing() {
+        PassageDocument passageWithDeletedRoute = new PassageDocument("pass1", "u1", "deleted-r1", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
+        PassageDocument normalPassage = new PassageDocument("pass2", "u1", "r2", PassageStatus.COMPLETED, null, null, new ArrayList<>(), null, null, false);
+        RouteDocument normalRoute = new RouteDocument("r2", null, List.of("p1"), false, null, null);
 
         when(passageRepository.findAllByStatusAndIsAnalyzedIsFalse(PassageStatus.COMPLETED))
                 .thenReturn(Stream.of(passageWithDeletedRoute, normalPassage));
 
-        // Имитируем, что для 'deleted-r1' маршрут не нашелся
         when(routeRepository.findAllById(Set.of("deleted-r1", "r2"))).thenReturn(List.of(normalRoute));
 
-        // Act
+
         analyticsService.fullAnalysis();
 
-        // Assert
-        // Проверяем, что апдейтер был вызван только для нормального прохождения
         verify(atomicUpdateService, times(1)).aggregatePassageAnalytics(normalPassage);
         verify(atomicUpdateService, never()).aggregatePassageAnalytics(passageWithDeletedRoute);
 
-        // Проверяем, что ОБА прохождения были помечены как проанализированные
         ArgumentCaptor<List<PassageDocument>> passageListCaptor = ArgumentCaptor.forClass(List.class);
         verify(passageRepository).saveAll(passageListCaptor.capture());
 
         List<PassageDocument> savedPassages = passageListCaptor.getValue();
         assertEquals(2, savedPassages.size());
-        // Проверяем, что оба флага isAnalyzed установлены в true
         assertTrue(savedPassages.stream().allMatch(PassageDocument::isAnalyzed));
     }
 
-    // Тест для самого сложного приватного метода integrityCheck можно оставить как есть,
-    // так как мы его уже тестировали отдельно.
-    // Но для полноты картины, можно добавить и его.
     @Test
     void integrityCheck_shouldCalculateCorrectly() {
-        RouteDocument route = new RouteDocument(null, null, List.of("A", "B", "B"), false, null, null);
+        RouteDocument route = new RouteDocument(null, null, List.of("p1", "p2", "p2"), false, null, null);
         PassageDocument passage = new PassageDocument();
-        passage.setVisitedPoints(List.of(new VisitedPoint("A", null, null)));
+        passage.setVisitedPoints(List.of(new VisitedPoint("p1", null, null)));
 
         PassageAnalytics result = analyticsService.integrityCheck(passage, route);
 
         assertEquals(2, result.getMissedPoints().size()); // Пропущено два 'B'
-        assertTrue(result.getMissedPoints().contains("B"));
-        // Покрытие (3-2)/3 ~ 0.333
+        assertTrue(result.getMissedPoints().contains("p2"));
+        // (3-2)/3 = 0.333
         assertEquals(1.0 / 3.0, result.getCoverage(), 0.001);
     }
-//    @Test
-//    void Lcs() {
-//        List<String> routePointIds = List.of("1", "2", "3", "5", "4", "5", "6", "7");
-//        List<String> passagePointIds = List.of("1", "2", "2", "3", "4", "5", "6", "7");
-//
-//        List<String> expect = List.of("1", "2", "3", "4", "5", "6", "7");
-//        List<String> lcs = analyticsService.calculateLCS(passagePointIds, routePointIds);
-//
-//        System.out.println(lcs);
-//
-//        assertEquals(expect.get(0), lcs.get(0));
-//        assertEquals(expect.get(1), lcs.get(1));
-//        assertEquals(expect.get(2), lcs.get(2));
-//        assertEquals(expect.get(3), lcs.get(3));
-//        assertEquals(expect.get(4), lcs.get(4));
-//        assertEquals(expect.get(5), lcs.get(5));
-//        assertEquals(expect.get(6), lcs.get(6));
-//    }
-
-//    @Test
-//    void integrityCheck() {
-//        PassageDocument passageDocument = new PassageDocument();
-//        RouteDocument routeDocument = new RouteDocument();
-//
-//        List<VisitedPoint> visitedPoints = List.of(
-//                new VisitedPoint("1", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("2", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("3", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("4", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("4", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("5", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("6", Instant.now(), Instant.now(), PointStatus.VISITED, null),
-//                new VisitedPoint("7", Instant.now(), Instant.now(), PointStatus.VISITED, null)
-//        );
-//        List<String> points = List.of("1", "2", "2", "3", "4", "5", "6", "7");
-//
-//        passageDocument.setVisitedPoints(visitedPoints);
-//        routeDocument.setPointsId(points);
-//
-//        PassageAnalytics analytics = analyticsService.integrityCheck(passageDocument, routeDocument);
-//
-//        assertEquals(1, analytics.getCoverage());
-//        assertEquals(1, analytics.getOrder());
-//        assertEquals(1, analytics.getExtraPoints().size());
-//        assertEquals(1, analytics.getMissedPoints().size());
-//    }
-
 }

@@ -1,14 +1,13 @@
 package com.example.route_service.api.services;
 
-import com.example.route_service.api.dto.PointResponse;
 import com.example.route_service.api.dto.RouteRequest;
 import com.example.route_service.api.dto.RouteResponse;
 import com.example.route_service.api.exeptions.InvalidObjectIdException;
+import com.example.route_service.api.exeptions.ObjectNotFoundException;
 import com.example.route_service.api.mappers.PointMapper;
 import com.example.route_service.api.mappers.RouteMapper;
 import com.example.route_service.store.documents.PointDocument;
 import com.example.route_service.store.documents.RouteDocument;
-import com.example.route_service.store.documents.models.RouteAnalytics;
 import com.example.route_service.store.repositories.PointRepository;
 import com.example.route_service.store.repositories.RouteRepository;
 import lombok.AccessLevel;
@@ -16,14 +15,16 @@ import lombok.experimental.FieldDefaults;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -42,184 +43,113 @@ class RouteServiceTest {
     PointMapper pointMapper;
     @Mock
     RouteMapper routeMapper;
+
     @InjectMocks
     RouteService routeService;
 
+    private static final String USER_ID = "user1";
+    private static final String ROUTE_ID = "route1";
+    private static final String POINT_ID_1 = "p1";
+    private static final String POINT_ID_2 = "p2";
+
     @BeforeEach
     void setUp() {
-        lenient().when(authService.getCurrentUserId()).thenReturn("user1");
-    }
-
-//    @Test
-//    void addRoute_whenRequestIsValid_shouldSucceed() {
-//        // --- Arrange (Подготовка) ---
-//        String userId = "user1";
-//        List<String> pointIds = List.of("point1", "point2");
-//        RouteRequest request = new RouteRequest(pointIds, false, new HashMap<>());
-//
-//        // Подготавливаем данные, которые будут "возвращать" репозитории
-//        PointDocument point1 = new PointDocument();
-//        point1.setPointId("point1");
-//        PointDocument point2 = new PointDocument();
-//        point2.setPointId("point2");
-//        List<PointDocument> points = List.of(point1, point2);
-//
-//        RouteDocument documentToSave = new RouteDocument(); // Объект, который "вернет" routeMapper.toDocument
-//        documentToSave.setPointsId(request.getPointsId());
-//
-//        RouteDocument savedDocument = new RouteDocument(); // Объект, который "вернет" routeRepository.save
-//        savedDocument.setRouteId("route1");
-//        savedDocument.setUserId(userId);
-//        savedDocument.setPointsId(request.getPointsId());
-//
-//        // Подготавливаем финальный объект, который мы ожидаем получить от сервиса
-//        RouteResponse expectedResponse = new RouteResponse("route1", userId, new ArrayList<>(), false, new HashMap<>());
-//
-//        // --- Mocking (Настройка моков) ---
-//        // Настраиваем все зависимости, которые будут вызваны внутри addRoute
-//
-//        when(authService.getCurrentUserId()).thenReturn(userId);
-//
-//        // Мокируем вызов внутри validateAndGetPoints
-//        when(pointRepository.findAllById(request.getPointsId())).thenReturn(points);
-//
-//        // Мокируем маппинг в документ
-//        when(routeMapper.toDocument(request)).thenReturn(documentToSave);
-//
-//        // Мокируем сохранение в репозиторий
-//        when(routeRepository.save(any(RouteDocument.class))).thenReturn(savedDocument);
-//
-//        // >>>>>>>>>>>> КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ <<<<<<<<<<<<
-//        // Говорим мокам, что возвращать при финальном маппинге в DTO.
-//        // Если этого не сделать, они вернут null.
-//        // Нам не важны детали pointResponses для этого теста, поэтому можем вернуть пустой PointResponse.
-//        when(pointMapper.toResponse(any(PointDocument.class))).thenReturn(new PointResponse());
-//
-//        // А вот финальный вызов routeMapper.toResponse важен. Говорим ему вернуть наш ожидаемый DTO.
-//        when(routeMapper.toResponse(eq(savedDocument), anyList())).thenReturn(expectedResponse);
-//        // eq(savedDocument) - убедиться, что маппится именно сохраненный документ.
-//        // anyList() - нам не важен точный контент списка для этого мока.
-//
-//        // --- Act (Действие) ---
-//        RouteResponse actualResponse = routeService.addRoute(request);
-//
-//        // --- Assert (Проверка) ---
-//        assertNotNull(actualResponse, "The response from addRoute should not be null");
-//        assertEquals(expectedResponse.getRouteId(), actualResponse.getRouteId());
-//        assertEquals(expectedResponse.getUserId(), actualResponse.getUserId());
-//
-//        // Проверяем, что ID пользователя был установлен правильно перед сохранением
-//        ArgumentCaptor<RouteDocument> routeCaptor = ArgumentCaptor.forClass(RouteDocument.class);
-//        verify(routeRepository).save(routeCaptor.capture()); // "Ловим" объект, который передали в save
-//        assertEquals(userId, routeCaptor.getValue().getUserId());
-//
-//        // Проверяем, что все нужные методы были вызваны
-//        verify(authService, times(1)).getCurrentUserId();
-//        verify(pointRepository, times(1)).findAllById(pointIds);
-//        verify(routeRepository, times(1)).save(any(RouteDocument.class));
-//        verify(routeMapper, times(1)).toResponse(eq(savedDocument), anyList());
-//        verify(pointMapper, times(2)).toResponse(any(PointDocument.class)); // 2 раза, т.к. в списке 2 точки
-//    }
-
-//    @Test
-//    void getMyRoutes() {
-//    }
-//
-//    @Test
-//    void getUserRoutes() {
-//    }
-
-
-    @Test
-    void addRoute() {
-        String userId = "user1";
-        String routeId = "route1";
-        List<String> pointIds = List.of("p1", "p2");
-        RouteRequest request = new RouteRequest(pointIds, false, new HashMap<>());
-
-        PointDocument point1 = new PointDocument("p1", null, null, null, null);
-        PointDocument point2 = new PointDocument("p2", null, null, null, null);
-        List<PointDocument> foundPoints = List.of(point1, point2);
-
-        RouteDocument documentToSave = new RouteDocument(null, null, pointIds, true, new HashMap<>(), new RouteAnalytics());
-        RouteDocument savedDocument = new RouteDocument(routeId, userId, pointIds, true, new HashMap<>(), new RouteAnalytics());
-        RouteResponse expectedResponse = new RouteResponse(routeId, userId, List.of(new PointResponse(), new PointResponse()), true, new HashMap<>());
-
-        when(pointRepository.findAllById(any())).thenReturn(foundPoints);
-        when(routeMapper.toDocument(request)).thenReturn(documentToSave);
-        when(routeRepository.save(any(RouteDocument.class))).thenReturn(savedDocument);
-        when(routeMapper.toResponse(any(), anyList())).thenReturn(expectedResponse);
-
-        RouteResponse response = routeService.addRoute(request);
-
-        assertNotNull(response);
-        assertEquals(expectedResponse.getRouteId(), response.getRouteId());
-
-        ArgumentCaptor<RouteDocument> routeCaptor = ArgumentCaptor.forClass(RouteDocument.class);
-        verify(routeRepository).save(routeCaptor.capture());
-        RouteDocument capturedRoute = routeCaptor.getValue();
-
-        assertNotNull(capturedRoute);
-        assertEquals(userId, capturedRoute.getUserId());
-        assertEquals(pointIds, routeCaptor.getValue().getPointsId());
-        assertEquals(request.getDescription(), capturedRoute.getDescription());
-
-        verify(authService, times(1)).getCurrentUserId();
-        verify(routeRepository, times(1)).save(any(RouteDocument.class));
-        verify(pointRepository, times(1)).findAllById(any());
-        verify(routeMapper, times(1)).toDocument(any(RouteRequest.class));
-        verify(routeMapper, times(1)).toResponse(any(RouteDocument.class), anyList());
+        lenient().when(authService.getCurrentUserId()).thenReturn(USER_ID);
     }
 
     @Test
-    void addRouteWhenPointNotFound() {
-        List<String> pointIds = List.of("p1", "p2");
-        RouteRequest request = new RouteRequest(pointIds, true, new HashMap<>());
-        List<PointDocument> foundPoints = List.of(new PointDocument("p1", null, null, null, null));
+    void getMyRoutes_whenUserHasRoutes_shouldReturnRouteList() {
+        RouteDocument routeDoc = new RouteDocument();
+        routeDoc.setRouteId(ROUTE_ID);
+        routeDoc.setPointsId(List.of(POINT_ID_1));
 
-        when(pointRepository.findAllById(any())).thenReturn(foundPoints);
+        PointDocument pointDoc = new PointDocument();
+        pointDoc.setPointId(POINT_ID_1);
 
-        assertThrows(InvalidObjectIdException.class, () -> {
-            routeService.addRoute(request);
-        });
+        when(routeRepository.findByUserId(USER_ID)).thenReturn(List.of(routeDoc));
+        when(pointRepository.findAllById(Set.of(POINT_ID_1))).thenReturn(List.of(pointDoc));
+        when(routeMapper.toResponse(any(), anyList())).thenReturn(new RouteResponse());
+
+        List<RouteResponse> result = routeService.getMyRoutes();
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void getMyRoutes_whenUserHasNoRoutes_shouldReturnEmptyList() {
+        when(routeRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
+
+        List<RouteResponse> result = routeService.getMyRoutes();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void addRoute_whenPointsAreValid_shouldCreateAndReturnRoute() {
+        RouteRequest request = new RouteRequest(List.of(POINT_ID_1, POINT_ID_2), false, null);
+        PointDocument point1 = new PointDocument(POINT_ID_1, "type", null, "addr", null);
+        PointDocument point2 = new PointDocument(POINT_ID_2, "type", null, "addr", null);
+
+        RouteDocument routeToSave = new RouteDocument();
+        RouteDocument savedRoute = new RouteDocument();
+        savedRoute.setRouteId(ROUTE_ID);
+
+        when(pointRepository.findAllById(Set.of(POINT_ID_1, POINT_ID_2))).thenReturn(List.of(point1, point2));
+        when(routeMapper.toDocument(request)).thenReturn(routeToSave);
+        when(routeRepository.save(routeToSave)).thenReturn(savedRoute);
+        when(routeMapper.toResponse(eq(savedRoute), anyList())).thenReturn(new RouteResponse());
+
+        RouteResponse result = routeService.addRoute(request);
+
+        assertNotNull(result);
+        verify(routeRepository).save(routeToSave);
+        assertEquals(USER_ID, routeToSave.getUserId());
+    }
+
+    @Test
+    void addRoute_whenPointIdIsInvalid_shouldThrowInvalidObjectIdException() {
+        RouteRequest request = new RouteRequest(List.of("invalid-point-id"), false, null);
+        when(pointRepository.findAllById(Set.of("invalid-point-id"))).thenReturn(Collections.emptyList());
+
+        assertThatThrownBy(() -> routeService.addRoute(request))
+                .isInstanceOf(InvalidObjectIdException.class);
+
         verify(routeRepository, never()).save(any());
     }
 
+    @Test
+    void deleteRoute_whenRouteExistsAndBelongsToUser_shouldDelete() {
+        when(routeRepository.deleteByRouteIdAndUserId(ROUTE_ID, USER_ID)).thenReturn(1L);
 
-    //        when(pointRepository.findAllById(eq(pointIds))).thenReturn(List.of(new PointDocument("p1", null, null, null, null)));
-//        doReturn(List.of(new PointDocument("p1", null, null, null, null))) // 1. Что вернуть
-//                .when(pointRepository) // 2. На каком мок-объекте
-//                .findAllById(eq(pointIds));
-//    @Test
-//    void updateRoute() {
-//    }
-//
-//    @Test
-//    void deleteRoute() {
-//    }
-//
-//    @Test
-//    void changeVisibility() {
-//    }
+        routeService.deleteRoute(ROUTE_ID);
+
+        verify(routeRepository).deleteByRouteIdAndUserId(ROUTE_ID, USER_ID);
+    }
+
+    @Test
+    void deleteRoute_whenRouteNotFoundOrNotBelongsToUser_shouldThrowObjectNotFoundException() {
+        when(routeRepository.deleteByRouteIdAndUserId(ROUTE_ID, USER_ID)).thenReturn(0L);
+
+        assertThatThrownBy(() -> routeService.deleteRoute(ROUTE_ID))
+                .isInstanceOf(ObjectNotFoundException.class);
+    }
+
+    @Test
+    void changeVisibility_whenRouteExists_shouldSetPublicAndSave() {
+        RouteDocument route = new RouteDocument();
+        route.setRouteId(ROUTE_ID);
+        route.setUserId(USER_ID);
+        route.setPublic(false);
+
+        when(routeRepository.findByUserIdAndRouteId(USER_ID, ROUTE_ID)).thenReturn(Optional.of(route));
+        when(routeRepository.save(any(RouteDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(routeMapper.toResponse(any(), anyList())).thenReturn(new RouteResponse());
+
+        routeService.changeVisibility(ROUTE_ID);
+
+        verify(routeRepository).save(route);
+        assertTrue(route.isPublic());
+    }
 }
-
-/*
-
- @Test
-    void whenAddRoute_withNonExistentPoint_shouldThrowException() {
-        // --- Arrange ---
-        List<String> pointIds = List.of("p1", "p2-non-existent");
-        RouteRequest request = new RouteRequest(pointIds, true, new HashMap<>());
-
-        // Мокируем так, будто репозиторий нашел только одну точку из двух
-        when(pointRepository.findAllById(pointIds)).thenReturn(List.of(new PointDocument("p1", null, null, null, null)));
-
-        // --- Act & Assert ---
-        assertThrows(InvalidObjectIdException.class, () -> {
-            routeService.addRoute(request);
-        });
-
-        // Убедимся, что маршрут даже не пытались сохранить
-        verify(routeRepository, never()).save(any());
-    }
- */

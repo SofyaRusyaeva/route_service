@@ -9,16 +9,12 @@ import com.example.route_service.store.documents.models.VisitedPoint;
 import com.example.route_service.store.enums.PassageStatus;
 import com.example.route_service.store.repositories.PassageRepository;
 import com.example.route_service.store.repositories.RouteRepository;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -27,27 +23,18 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@Testcontainers
 @Slf4j
-public class AnalyticsServiceIntegrationTest {
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class AnalyticsServiceIT extends AbstractIntegrationTest {
 
-    @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0");
     @Autowired
-    private AnalyticsService analyticsService;
+    AnalyticsService analyticsService;
     @Autowired
-    private RouteRepository routeRepository;
+    RouteRepository routeRepository;
     @Autowired
-    private PassageRepository passageRepository;
+    PassageRepository passageRepository;
     @Autowired
-    private AtomicUpdateService atomicUpdateService;
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-        registry.add("spring.task.scheduling.enabled", () -> "false");
-    }
+    AtomicUpdateService atomicUpdateService;
 
     @AfterEach
     void tearDown() {

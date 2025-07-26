@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
@@ -16,6 +17,7 @@ import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
  * @see com.example.route_service.store.documents.PointDocument
  */
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PointRequest {
